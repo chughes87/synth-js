@@ -16,7 +16,7 @@ Goal: a working browser synth where you can hear an oscillator through your spea
 
 ### Sub-tasks
 
-- [ ] **1. Project setup** — `package.json` with Jest + ESM config, `npm install`, verify `npm test` passes with no tests
+- [x] **1. Project setup** — `package.json` with Jest + ESM config, `npm install`, verify `npm test` passes with no tests
 - [ ] **2. AudioEngine** — `src/engine/AudioEngine.js` + `tests/engine/AudioEngine.test.js` + shared `tests/__mocks__/AudioContextMock.js`
 - [ ] **3. OscillatorModule** — `src/modules/OscillatorModule.js` + `tests/modules/OscillatorModule.test.js`
 - [ ] **4. OutputModule** — `src/modules/OutputModule.js` + `tests/modules/OutputModule.test.js`
