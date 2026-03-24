@@ -24,7 +24,7 @@ const TRIG_PARAMS = {
 };
 
 // Types that can be trigger sources
-const TRIG_SOURCE_TYPES = new Set(['seq', 'trigger', 'clock']);
+const TRIG_SOURCE_TYPES = new Set(['seq', 'trigger']);
 
 function shortLabel(instanceId) {
   const type = typeOf(instanceId);
