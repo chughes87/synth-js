@@ -153,9 +153,19 @@ export class ModPatchMatrixPanel {
 
   rebuild() {
     const active = [...this._activeModules];
-    const rows = active
-      .filter(id => MOD_SOURCE_TYPES.has(typeOf(id)))
-      .map(id => ({ id, label: shortLabel(id) }));
+
+    // Build rows: non-seq sources get one row; seq sources get CV + Trg rows
+    const rows = [];
+    for (const id of active) {
+      const type = typeOf(id);
+      if (!MOD_SOURCE_TYPES.has(type)) continue;
+      if (type === 'seq') {
+        rows.push({ id: `${id}:cv`, label: `${shortLabel(id)} CV`, realId: id, output: 'cv' });
+        rows.push({ id: `${id}:trg`, label: `${shortLabel(id)} Trg`, realId: id, output: 'trg' });
+      } else {
+        rows.push({ id, label: shortLabel(id), realId: id, output: null });
+      }
+    }
 
     // Build columns: for each active target module, add a column per param
     const cols = [];
@@ -168,24 +178,56 @@ export class ModPatchMatrixPanel {
       }
     }
 
-    const validCheck = (sourceId, targetId) => {
-      const sourceType = typeOf(sourceId);
+    // Seq CV rows can only connect to freq/q/gain; Trg rows only to trigger
+    const SEQ_CV_PARAMS = new Set(['freq', 'q', 'gain']);
+
+    const validCheck = (sourceRowId, targetId) => {
+      const row = rows.find(r => r.id === sourceRowId);
+      if (!row) return false;
+      const sourceType = typeOf(row.realId);
       const dotIdx = targetId.lastIndexOf('.');
       const targetInstanceId = targetId.slice(0, dotIdx);
       const param = targetId.slice(dotIdx + 1);
       const targetType = typeOf(targetInstanceId);
       const typeTarget = `${targetType}.${param}`;
-      return (MOD_CONNECTIONS[sourceType] ?? []).includes(typeTarget);
+
+      if (!(MOD_CONNECTIONS[sourceType] ?? []).includes(typeTarget)) return false;
+
+      // Filter by seq output type
+      if (row.output === 'cv') return SEQ_CV_PARAMS.has(param);
+      if (row.output === 'trg') return param === 'trigger';
+      return true;
     };
 
-    this._cells = buildMatrix(this._container, this.patchBay, rows, cols, validCheck, this._onChange, this._onRemove);
+    // Wrap patchBay to translate virtual row IDs back to real instance IDs
+    const patchProxy = {
+      isConnected: (sourceRowId, targetId) => {
+        const row = rows.find(r => r.id === sourceRowId);
+        return row ? this.patchBay.isConnected(row.realId, targetId) : false;
+      },
+      toggle: (sourceRowId, targetId) => {
+        const row = rows.find(r => r.id === sourceRowId);
+        return row ? this.patchBay.toggle(row.realId, targetId) : false;
+      },
+    };
+
+    this._rows = rows;
+    this._cells = buildMatrix(this._container, patchProxy, rows, cols, validCheck, this._onChange, (rowId) => {
+      const row = rows.find(r => r.id === rowId);
+      if (row) this._onRemove(row.realId);
+    });
+  }
+
+  _realSourceId(virtualId) {
+    const row = this._rows?.find(r => r.id === virtualId);
+    return row ? row.realId : virtualId;
   }
 
   refresh() {
     for (const [key, btn] of this._cells) {
       if (btn.disabled) continue;
       const [source, target] = key.split('->');
-      btn.classList.toggle('active', this.patchBay.isConnected(source, target));
+      btn.classList.toggle('active', this.patchBay.isConnected(this._realSourceId(source), target));
     }
   }
 }
