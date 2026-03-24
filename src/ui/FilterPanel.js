@@ -1,8 +1,8 @@
 import { BasePanel } from './BasePanel.js';
 
 export class FilterPanel extends BasePanel {
-  constructor(filterModule, container) {
-    super(filterModule, container);
+  constructor(filterModule, container, instanceId) {
+    super(filterModule, container, instanceId);
     this.setTitle('Filter');
     this.createSelect('Type', 'type', [
       { value: 'lowpass', label: 'Lowpass' },

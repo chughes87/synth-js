@@ -1,8 +1,8 @@
 import { BasePanel } from './BasePanel.js';
 
 export class LFOPanel extends BasePanel {
-  constructor(lfoModule, container) {
-    super(lfoModule, container);
+  constructor(lfoModule, container, instanceId) {
+    super(lfoModule, container, instanceId);
     this.setTitle('LFO');
     this.createSelect('Waveform', 'type', [
       { value: 'sine', label: 'Sine' },
