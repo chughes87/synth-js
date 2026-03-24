@@ -72,6 +72,16 @@ export class SignalPatchBay {
     return this._connections.has(this._key(sourceId, targetId));
   }
 
+  /** Disconnect all connections involving the given module (as source or target). */
+  disconnectAll(moduleId) {
+    for (const key of [...this._connections]) {
+      const [source, target] = key.split('->');
+      if (source === moduleId || target === moduleId) {
+        this.disconnect(source, target);
+      }
+    }
+  }
+
   getConnections() {
     return [...this._connections].map(key => {
       const [source, target] = key.split('->');

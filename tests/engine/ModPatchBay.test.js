@@ -136,6 +136,37 @@ describe('ModPatchBay', () => {
     });
   });
 
+  describe('disconnectAll', () => {
+    test('removes all connections where module is source', () => {
+      patchBay.connect('lfo', 'filter.freq');
+      patchBay.connect('lfo', 'vca.gain');
+      patchBay.connect('envelope', 'vca.gain');
+      patchBay.disconnectAll('lfo');
+      expect(patchBay.getConnections()).toEqual([{ source: 'envelope', target: 'vca.gain' }]);
+    });
+
+    test('removes all connections targeting a module param', () => {
+      patchBay.connect('lfo', 'filter.freq');
+      patchBay.connect('lfo', 'filter.q');
+      patchBay.connect('envelope', 'vca.gain');
+      patchBay.disconnectAll('filter');
+      expect(patchBay.getConnections()).toEqual([{ source: 'envelope', target: 'vca.gain' }]);
+    });
+
+    test('unwires audio params', () => {
+      patchBay.connect('lfo', 'filter.freq');
+      patchBay.disconnectAll('filter');
+      expect(modules.lfo._depthNode._connections)
+        .not.toContain(modules.filter._filter.frequency);
+    });
+
+    test('no-op for module with no connections', () => {
+      patchBay.connect('lfo', 'filter.freq');
+      patchBay.disconnectAll('osc');
+      expect(patchBay.getConnections()).toHaveLength(1);
+    });
+  });
+
   describe('validity', () => {
     test('rejects audio sources', () => {
       expect(patchBay.connect('osc', 'filter.freq')).toBe(false);

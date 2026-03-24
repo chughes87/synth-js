@@ -144,6 +144,36 @@ describe('SignalPatchBay', () => {
     });
   });
 
+  describe('disconnectAll', () => {
+    test('removes all connections where module is source', () => {
+      patchBay.connect('osc', 'filter');
+      patchBay.connect('osc', 'vca');
+      patchBay.connect('noise', 'filter');
+      patchBay.disconnectAll('osc');
+      expect(patchBay.getConnections()).toEqual([{ source: 'noise', target: 'filter' }]);
+    });
+
+    test('removes all connections where module is target', () => {
+      patchBay.connect('osc', 'filter');
+      patchBay.connect('noise', 'filter');
+      patchBay.connect('osc', 'vca');
+      patchBay.disconnectAll('filter');
+      expect(patchBay.getConnections()).toEqual([{ source: 'osc', target: 'vca' }]);
+    });
+
+    test('unwires audio nodes', () => {
+      patchBay.connect('osc', 'filter');
+      patchBay.disconnectAll('osc');
+      expect(modules.osc.outputNode._connections).not.toContain(modules.filter.inputNode);
+    });
+
+    test('no-op for module with no connections', () => {
+      patchBay.connect('osc', 'filter');
+      patchBay.disconnectAll('delay');
+      expect(patchBay.getConnections()).toHaveLength(1);
+    });
+  });
+
   describe('validity', () => {
     test('rejects self-connections', () => {
       expect(patchBay.connect('filter', 'filter')).toBe(false);

@@ -27,6 +27,7 @@ import { Rack } from './ui/Rack.js';
 const engine = new AudioEngine();
 const ctx = engine.context;
 
+// All modules are instantiated upfront (cheap Web Audio nodes)
 const oscillator = new OscillatorModule(ctx);
 const noise = new NoiseModule(ctx);
 const envelope = new EnvelopeModule(ctx);
@@ -45,17 +46,134 @@ analyser.connect({ inputNode: ctx.destination });
 
 const modules = { osc: oscillator, noise, filter, vca, envelope, delay, lfo, output };
 
-// Separate patch bays for audio and modulation routing
+// Patch bays
 const signalPatchBay = new SignalPatchBay(modules);
 const modPatchBay = new ModPatchBay(modules);
 
-// Default signal chain: osc → filter → vca → output, envelope → vca.gain
-signalPatchBay.connect('osc', 'filter');
-signalPatchBay.connect('filter', 'vca');
-signalPatchBay.connect('vca', 'output');
-modPatchBay.connect('envelope', 'vca.gain');
+// --- Active module tracking ---
+const ALL_MODULES = [
+  { id: 'osc', label: 'Oscillator' },
+  { id: 'noise', label: 'Noise' },
+  { id: 'filter', label: 'Filter' },
+  { id: 'vca', label: 'VCA' },
+  { id: 'delay', label: 'Delay' },
+  { id: 'output', label: 'Output' },
+  { id: 'lfo', label: 'LFO' },
+  { id: 'envelope', label: 'Envelope' },
+];
 
-// UI panels
+const activeModules = new Set();
+
+function onPatchChange() {
+  patchViz.refresh();
+}
+
+function onModulesChange() {
+  signalMatrix.rebuild();
+  modMatrix.rebuild();
+  patchViz.refresh();
+  populateModuleSelect();
+}
+
+function addModule(id) {
+  if (activeModules.has(id)) return;
+  activeModules.add(id);
+  onModulesChange();
+}
+
+function removeModule(id) {
+  if (!activeModules.has(id)) return;
+  signalPatchBay.disconnectAll(id);
+  modPatchBay.disconnectAll(id);
+  activeModules.delete(id);
+  onModulesChange();
+}
+
+// --- Presets ---
+const PRESETS = {
+  subtractive: {
+    modules: ['osc', 'filter', 'vca', 'output', 'envelope'],
+    signal: [['osc', 'filter'], ['filter', 'vca'], ['vca', 'output']],
+    mod: [['envelope', 'vca.gain']],
+  },
+  fm: {
+    modules: ['osc', 'output', 'lfo'],
+    signal: [['osc', 'output']],
+    mod: [['lfo', 'osc.freq']],
+  },
+  noisepad: {
+    modules: ['noise', 'filter', 'vca', 'output', 'envelope', 'lfo'],
+    signal: [['noise', 'filter'], ['filter', 'vca'], ['vca', 'output']],
+    mod: [['envelope', 'vca.gain'], ['lfo', 'filter.freq']],
+  },
+};
+
+function loadPreset(name) {
+  const preset = PRESETS[name];
+  if (!preset) return;
+
+  // Clear everything
+  for (const id of [...activeModules]) {
+    signalPatchBay.disconnectAll(id);
+    modPatchBay.disconnectAll(id);
+  }
+  activeModules.clear();
+
+  // Add modules
+  for (const id of preset.modules) {
+    activeModules.add(id);
+  }
+
+  // Make connections
+  for (const [src, tgt] of preset.signal) {
+    signalPatchBay.connect(src, tgt);
+  }
+  for (const [src, tgt] of preset.mod) {
+    modPatchBay.connect(src, tgt);
+  }
+
+  onModulesChange();
+}
+
+// --- Module picker UI ---
+const moduleSelect = document.getElementById('module-select');
+const moduleAddBtn = document.getElementById('module-add-btn');
+const presetSelect = document.getElementById('preset-select');
+
+function populateModuleSelect() {
+  moduleSelect.innerHTML = '';
+  const available = ALL_MODULES.filter(m => !activeModules.has(m.id));
+  if (available.length === 0) {
+    const opt = document.createElement('option');
+    opt.textContent = 'All modules added';
+    opt.disabled = true;
+    moduleSelect.appendChild(opt);
+    moduleAddBtn.disabled = true;
+  } else {
+    moduleAddBtn.disabled = false;
+    for (const m of available) {
+      const opt = document.createElement('option');
+      opt.value = m.id;
+      opt.textContent = m.label;
+      moduleSelect.appendChild(opt);
+    }
+  }
+}
+
+moduleAddBtn.addEventListener('click', () => {
+  const id = moduleSelect.value;
+  if (id) addModule(id);
+});
+
+presetSelect.addEventListener('change', () => {
+  const name = presetSelect.value;
+  if (name) {
+    loadPreset(name);
+    presetSelect.value = '';
+  }
+});
+
+// --- UI panels ---
 new OscillatorPanel(oscillator);
 new OutputPanel(output);
 new FilterPanel(filter);
@@ -65,8 +183,10 @@ new EnvelopePanel(envelope);
 new VCAPanel(vca);
 new SequencerPanel(sequencer);
 const vizPanel = new VisualizerPanel(analyser);
-const patchViz = new PatchVisualizerPanel(signalPatchBay, modPatchBay);
-const onPatchChange = () => patchViz.refresh();
-new SignalPatchMatrixPanel(signalPatchBay, onPatchChange);
-new ModPatchMatrixPanel(modPatchBay, onPatchChange);
+const patchViz = new PatchVisualizerPanel(signalPatchBay, modPatchBay, activeModules);
+const signalMatrix = new SignalPatchMatrixPanel(signalPatchBay, activeModules, onPatchChange, removeModule);
+const modMatrix = new ModPatchMatrixPanel(modPatchBay, activeModules, onPatchChange, removeModule);
 new Rack(engine, { oscillator, noise, envelope, filter, vca, delay, lfo, output, sequencer }, signalPatchBay, modPatchBay, vizPanel);
+
+// Start with empty patch — populate the dropdown
+populateModuleSelect();

@@ -1,7 +1,7 @@
 import { SIGNAL_CONNECTIONS } from '../engine/SignalPatchBay.js';
 import { MOD_CONNECTIONS } from '../engine/ModPatchBay.js';
 
-const SIGNAL_ROWS = [
+const ALL_SIGNAL_ROWS = [
   { id: 'osc', label: 'Osc' },
   { id: 'noise', label: 'Noise' },
   { id: 'filter', label: 'Filter' },
@@ -9,27 +9,38 @@ const SIGNAL_ROWS = [
   { id: 'delay', label: 'Delay' },
 ];
 
-const SIGNAL_COLUMNS = [
+const ALL_SIGNAL_COLUMNS = [
   { id: 'filter', label: 'Filter' },
   { id: 'vca', label: 'VCA' },
   { id: 'delay', label: 'Delay' },
   { id: 'output', label: 'Out' },
 ];
 
-const MOD_ROWS = [
+const ALL_MOD_ROWS = [
   { id: 'lfo', label: 'LFO' },
   { id: 'envelope', label: 'Env' },
 ];
 
-const MOD_COLUMNS = [
+const ALL_MOD_COLUMNS = [
   { id: 'osc.freq', label: 'Osc Hz' },
   { id: 'filter.freq', label: 'Flt Hz' },
   { id: 'filter.q', label: 'Flt Q' },
   { id: 'vca.gain', label: 'VCA Gn' },
 ];
 
-function buildMatrix(containerId, patchBay, rows, columns, validConnections, onChange) {
-  const container = document.getElementById(containerId);
+// Map mod target IDs to their parent module
+const MOD_TARGET_MODULE = {
+  'osc.freq': 'osc',
+  'filter.freq': 'filter',
+  'filter.q': 'filter',
+  'vca.gain': 'vca',
+};
+
+function buildMatrix(container, patchBay, rows, columns, validConnections, onChange, onRemove) {
+  container.querySelectorAll('table').forEach(t => t.remove());
+
+  if (rows.length === 0 || columns.length === 0) return new Map();
+
   const table = document.createElement('table');
   table.className = 'patch-matrix';
   const cells = new Map();
@@ -51,7 +62,18 @@ function buildMatrix(containerId, patchBay, rows, columns, validConnections, onC
   for (const row of rows) {
     const tr = document.createElement('tr');
     const rowHeader = document.createElement('th');
-    rowHeader.textContent = row.label;
+
+    if (onRemove) {
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'module-remove';
+      removeBtn.textContent = '\u00d7';
+      removeBtn.title = `Remove ${row.label}`;
+      removeBtn.addEventListener('click', () => onRemove(row.id));
+      rowHeader.appendChild(removeBtn);
+    }
+
+    const label = document.createTextNode(row.label);
+    rowHeader.appendChild(label);
     tr.appendChild(rowHeader);
 
     const allowed = validConnections[row.id] ?? [];
@@ -88,11 +110,23 @@ function buildMatrix(containerId, patchBay, rows, columns, validConnections, onC
 
 /**
  * SignalPatchMatrixPanel renders the audio signal routing grid.
+ * Only shows rows/columns for active modules.
  */
 export class SignalPatchMatrixPanel {
-  constructor(signalPatchBay, onChange) {
+  constructor(signalPatchBay, activeModules, onChange, onRemove) {
     this.patchBay = signalPatchBay;
-    this._cells = buildMatrix('signal-patch-panel', signalPatchBay, SIGNAL_ROWS, SIGNAL_COLUMNS, SIGNAL_CONNECTIONS, onChange);
+    this._activeModules = activeModules;
+    this._onChange = onChange;
+    this._onRemove = onRemove;
+    this._container = document.getElementById('signal-patch-panel');
+    this._cells = new Map();
+    this.rebuild();
+  }
+
+  rebuild() {
+    const rows = ALL_SIGNAL_ROWS.filter(r => this._activeModules.has(r.id));
+    const cols = ALL_SIGNAL_COLUMNS.filter(c => this._activeModules.has(c.id));
+    this._cells = buildMatrix(this._container, this.patchBay, rows, cols, SIGNAL_CONNECTIONS, this._onChange, this._onRemove);
   }
 
   refresh() {
@@ -106,11 +140,23 @@ export class SignalPatchMatrixPanel {
 
 /**
  * ModPatchMatrixPanel renders the modulation routing grid.
+ * Only shows rows for active mod sources, columns for active target modules.
  */
 export class ModPatchMatrixPanel {
-  constructor(modPatchBay, onChange) {
+  constructor(modPatchBay, activeModules, onChange, onRemove) {
     this.patchBay = modPatchBay;
-    this._cells = buildMatrix('mod-patch-panel', modPatchBay, MOD_ROWS, MOD_COLUMNS, MOD_CONNECTIONS, onChange);
+    this._activeModules = activeModules;
+    this._onChange = onChange;
+    this._onRemove = onRemove;
+    this._container = document.getElementById('mod-patch-panel');
+    this._cells = new Map();
+    this.rebuild();
+  }
+
+  rebuild() {
+    const rows = ALL_MOD_ROWS.filter(r => this._activeModules.has(r.id));
+    const cols = ALL_MOD_COLUMNS.filter(c => this._activeModules.has(MOD_TARGET_MODULE[c.id]));
+    this._cells = buildMatrix(this._container, this.patchBay, rows, cols, MOD_CONNECTIONS, this._onChange, this._onRemove);
   }
 
   refresh() {
