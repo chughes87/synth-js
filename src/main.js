@@ -212,7 +212,7 @@ function populateModuleSelect() {
   }
 }
 
-function loadPreset(name) {
+function loadPreset(name, { updateUrl = true } = {}) {
   const preset = PRESETS[name];
   if (!preset) return;
 
@@ -234,6 +234,12 @@ function loadPreset(name) {
   }
 
   onModulesChange();
+
+  if (updateUrl) {
+    const url = new URL(window.location);
+    url.searchParams.set('preset', name);
+    history.replaceState(null, '', url);
+  }
 }
 
 moduleAddBtn.addEventListener('click', () => {
@@ -258,3 +264,9 @@ const trigMatrix = new TrigPatchMatrixPanel(modPatchBay, activeModules, onPatchC
 const rack = new Rack(engine, registry, activeModules, signalPatchBay, modPatchBay, vizPanel);
 
 populateModuleSelect();
+
+// Load preset from URL if present
+const initialPreset = new URLSearchParams(window.location.search).get('preset');
+if (initialPreset && PRESETS[initialPreset]) {
+  loadPreset(initialPreset, { updateUrl: false });
+}
