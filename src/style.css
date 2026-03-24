@@ -23,6 +23,14 @@ body {
   justify-content: center;
 }
 
+#module-panels {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  justify-content: center;
+  min-width: 100%;
+}
+
 .module {
   background: #16213e;
   border: 1px solid #0f3460;

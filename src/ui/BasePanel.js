@@ -1,36 +1,85 @@
 /**
- * BasePanel provides declarative DOM control binding for module panels.
+ * BasePanel provides dynamic DOM creation and control binding for module panels.
+ * Each panel creates its own DOM subtree inside a given container element.
  */
 export class BasePanel {
-  constructor(module) {
+  constructor(module, container) {
     this.module = module;
+    this.el = document.createElement('div');
+    this.el.className = 'module';
+    container.appendChild(this.el);
+  }
+
+  setTitle(text) {
+    const h2 = document.createElement('h2');
+    h2.textContent = text;
+    this.el.appendChild(h2);
   }
 
   /**
-   * Bind a range slider to a module property.
-   * @param {string} id - DOM element ID prefix (slider is #id, display is #id-value)
-   * @param {string} prop - Module property name to set
-   * @param {function} format - Formats the numeric value for display
+   * Create a range slider bound to a module property.
    */
-  bindSlider(id, prop, format) {
-    const slider = document.getElementById(id);
-    const display = document.getElementById(`${id}-value`);
-    slider.addEventListener('input', () => {
-      const val = Number(slider.value);
+  createSlider(label, prop, { min, max, value, step, format }) {
+    const wrapper = document.createElement('label');
+    const labelText = document.createTextNode(label);
+    wrapper.appendChild(labelText);
+
+    const input = document.createElement('input');
+    input.type = 'range';
+    input.min = min;
+    input.max = max;
+    input.value = value;
+    input.step = step;
+
+    const display = document.createElement('span');
+    display.textContent = format(Number(value));
+
+    input.addEventListener('input', () => {
+      const val = Number(input.value);
       this.module[prop] = val;
       display.textContent = format(val);
     });
+
+    wrapper.appendChild(input);
+    wrapper.appendChild(display);
+    this.el.appendChild(wrapper);
+
+    // Sync initial value to module
+    this.module[prop] = Number(value);
+
+    return input;
   }
 
   /**
-   * Bind a select element to a module property.
-   * @param {string} id - DOM element ID
-   * @param {string} prop - Module property name to set
+   * Create a select element bound to a module property.
+   * @param {string} label
+   * @param {string} prop
+   * @param {Array<{value: string, label: string}>} options
    */
-  bindSelect(id, prop) {
-    const select = document.getElementById(id);
+  createSelect(label, prop, options) {
+    const wrapper = document.createElement('label');
+    const labelText = document.createTextNode(label);
+    wrapper.appendChild(labelText);
+
+    const select = document.createElement('select');
+    for (const opt of options) {
+      const option = document.createElement('option');
+      option.value = opt.value;
+      option.textContent = opt.label;
+      select.appendChild(option);
+    }
+
     select.addEventListener('change', () => {
       this.module[prop] = select.value;
     });
+
+    wrapper.appendChild(select);
+    this.el.appendChild(wrapper);
+
+    return select;
+  }
+
+  destroy() {
+    this.el.remove();
   }
 }
