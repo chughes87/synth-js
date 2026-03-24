@@ -1,10 +1,12 @@
+import { BaseModule } from './BaseModule.js';
+
 /**
  * NoiseModule generates white noise via an AudioBufferSourceNode.
  * Like OscillatorNode, BufferSourceNode is one-shot — start() recreates it.
  */
-export class NoiseModule {
+export class NoiseModule extends BaseModule {
   constructor(audioContext) {
-    this.context = audioContext;
+    super(audioContext);
     this._source = null;
     this._buffer = this._createNoiseBuffer();
     this.outputNode = audioContext.createGain();
@@ -22,11 +24,6 @@ export class NoiseModule {
 
   get running() {
     return this._source !== null;
-  }
-
-  connect(target) {
-    const destination = target.inputNode ?? target;
-    this.outputNode.connect(destination);
   }
 
   start() {

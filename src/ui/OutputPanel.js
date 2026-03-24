@@ -1,21 +1,14 @@
+import { BasePanel } from './BasePanel.js';
+
 /**
  * Binds the output DOM controls to an OutputModule.
  */
-export class OutputPanel {
+export class OutputPanel extends BasePanel {
   constructor(outputModule) {
-    this.module = outputModule;
-    this.volumeSlider = document.getElementById('output-volume');
-    this.volumeValue = document.getElementById('output-volume-value');
-
-    this.volumeSlider.addEventListener('input', () => this._onVolume());
+    super(outputModule);
+    this.bindSlider('output-volume', 'volume', v => v.toFixed(2));
 
     // Sync initial volume from slider
-    this.module.volume = Number(this.volumeSlider.value);
-  }
-
-  _onVolume() {
-    const val = Number(this.volumeSlider.value);
-    this.module.volume = val;
-    this.volumeValue.textContent = val.toFixed(2);
+    this.module.volume = Number(document.getElementById('output-volume').value);
   }
 }

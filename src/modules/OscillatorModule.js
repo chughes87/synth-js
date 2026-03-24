@@ -1,10 +1,12 @@
+import { BaseModule } from './BaseModule.js';
+
 /**
  * OscillatorModule wraps a Web Audio OscillatorNode.
  * Because OscillatorNode is one-shot, start() creates a fresh node each time.
  */
-export class OscillatorModule {
+export class OscillatorModule extends BaseModule {
   constructor(audioContext) {
-    this.context = audioContext;
+    super(audioContext);
     this._oscillator = null;
     this._frequency = 440;
     this._type = 'sine';
@@ -35,11 +37,6 @@ export class OscillatorModule {
 
   get running() {
     return this._oscillator !== null;
-  }
-
-  connect(target) {
-    const destination = target.inputNode ?? target;
-    this.outputNode.connect(destination);
   }
 
   start() {

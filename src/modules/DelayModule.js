@@ -1,12 +1,14 @@
+import { BaseModule } from './BaseModule.js';
+
 /**
  * DelayModule wraps a DelayNode with a feedback loop.
  * Signal flow: inputNode (gain) → delay → outputNode (gain)
  *                                   ↑          ↓
  *                                   ← feedback ←
  */
-export class DelayModule {
+export class DelayModule extends BaseModule {
   constructor(audioContext, { maxDelay = 2 } = {}) {
-    this.context = audioContext;
+    super(audioContext);
     this._delay = audioContext.createDelay(maxDelay);
     this._feedback = audioContext.createGain();
     this.inputNode = audioContext.createGain();
@@ -41,8 +43,4 @@ export class DelayModule {
     this._feedback.gain.value = Math.max(0, Math.min(0.95, value));
   }
 
-  connect(target) {
-    const destination = target.inputNode ?? target;
-    this.outputNode.connect(destination);
-  }
 }
