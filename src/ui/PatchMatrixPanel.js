@@ -8,25 +8,26 @@ const SIGNAL_SOURCE_TYPES = new Set(Object.keys(SIGNAL_CONNECTIONS));
 const SIGNAL_TARGET_TYPES = new Set(Object.values(SIGNAL_CONNECTIONS).flat());
 // Module types that can be mod sources (rows)
 const MOD_SOURCE_TYPES = new Set(Object.keys(MOD_CONNECTIONS));
-// Mod param names per target type
-const MOD_PARAMS = {
+
+// CV mod params (continuous modulation targets)
+const CV_PARAMS = {
   osc: [{ param: 'freq', label: 'Hz' }],
   filter: [{ param: 'freq', label: 'Hz' }, { param: 'q', label: 'Q' }],
   vca: [{ param: 'gain', label: 'Gn' }],
+};
+
+// Trigger params
+const TRIG_PARAMS = {
   envelope: [{ param: 'trigger', label: 'Trg' }],
 };
 
-function labelFor(instanceId) {
-  const type = typeOf(instanceId);
-  const num = instanceId.slice(type.length + 1);
-  const name = type.charAt(0).toUpperCase() + type.slice(1);
-  return `${name} ${num}`;
-}
+// Types that can be trigger sources
+const TRIG_SOURCE_TYPES = new Set(['seq']);
 
 function shortLabel(instanceId) {
   const type = typeOf(instanceId);
   const num = instanceId.slice(type.length + 1);
-  const SHORT = { osc: 'Osc', noise: 'Nse', filter: 'Flt', vca: 'VCA', delay: 'Dly', output: 'Out', lfo: 'LFO', envelope: 'Env' };
+  const SHORT = { osc: 'Osc', noise: 'Nse', filter: 'Flt', vca: 'VCA', delay: 'Dly', output: 'Out', lfo: 'LFO', envelope: 'Env', seq: 'Seq' };
   return `${SHORT[type] ?? type} ${num}`;
 }
 
@@ -97,7 +98,7 @@ function buildMatrix(container, patchBay, rows, columns, validCheck, onChange, o
 }
 
 /**
- * SignalPatchMatrixPanel — dynamic rows/columns based on active instance IDs.
+ * SignalPatchMatrixPanel — audio signal routing.
  */
 export class SignalPatchMatrixPanel {
   constructor(signalPatchBay, activeModules, onChange, onRemove) {
@@ -138,7 +139,7 @@ export class SignalPatchMatrixPanel {
 }
 
 /**
- * ModPatchMatrixPanel — rows are mod source instances, columns are modTarget instances with params.
+ * ModPatchMatrixPanel — CV modulation routing (LFO, envelope, seq → freq/q/gain).
  */
 export class ModPatchMatrixPanel {
   constructor(modPatchBay, activeModules, onChange, onRemove) {
@@ -153,81 +154,90 @@ export class ModPatchMatrixPanel {
 
   rebuild() {
     const active = [...this._activeModules];
+    const rows = active
+      .filter(id => MOD_SOURCE_TYPES.has(typeOf(id)))
+      .map(id => ({ id, label: shortLabel(id) }));
 
-    // Build rows: non-seq sources get one row; seq sources get CV + Trg rows
-    const rows = [];
-    for (const id of active) {
-      const type = typeOf(id);
-      if (!MOD_SOURCE_TYPES.has(type)) continue;
-      if (type === 'seq') {
-        rows.push({ id: `${id}:cv`, label: `${shortLabel(id)} CV`, realId: id, output: 'cv' });
-        rows.push({ id: `${id}:trg`, label: `${shortLabel(id)} Trg`, realId: id, output: 'trg' });
-      } else {
-        rows.push({ id, label: shortLabel(id), realId: id, output: null });
-      }
-    }
-
-    // Build columns: for each active target module, add a column per param
     const cols = [];
     for (const id of active) {
       const type = typeOf(id);
-      const params = MOD_PARAMS[type];
+      const params = CV_PARAMS[type];
       if (!params) continue;
       for (const p of params) {
         cols.push({ id: `${id}.${p.param}`, label: `${shortLabel(id)} ${p.label}` });
       }
     }
 
-    // Seq CV rows can only connect to freq/q/gain; Trg rows only to trigger
-    const SEQ_CV_PARAMS = new Set(['freq', 'q', 'gain']);
-
-    const validCheck = (sourceRowId, targetId) => {
-      const row = rows.find(r => r.id === sourceRowId);
-      if (!row) return false;
-      const sourceType = typeOf(row.realId);
+    const validCheck = (sourceId, targetId) => {
+      const sourceType = typeOf(sourceId);
       const dotIdx = targetId.lastIndexOf('.');
       const targetInstanceId = targetId.slice(0, dotIdx);
       const param = targetId.slice(dotIdx + 1);
       const targetType = typeOf(targetInstanceId);
       const typeTarget = `${targetType}.${param}`;
-
-      if (!(MOD_CONNECTIONS[sourceType] ?? []).includes(typeTarget)) return false;
-
-      // Filter by seq output type
-      if (row.output === 'cv') return SEQ_CV_PARAMS.has(param);
-      if (row.output === 'trg') return param === 'trigger';
-      return true;
+      return (MOD_CONNECTIONS[sourceType] ?? []).includes(typeTarget);
     };
 
-    // Wrap patchBay to translate virtual row IDs back to real instance IDs
-    const patchProxy = {
-      isConnected: (sourceRowId, targetId) => {
-        const row = rows.find(r => r.id === sourceRowId);
-        return row ? this.patchBay.isConnected(row.realId, targetId) : false;
-      },
-      toggle: (sourceRowId, targetId) => {
-        const row = rows.find(r => r.id === sourceRowId);
-        return row ? this.patchBay.toggle(row.realId, targetId) : false;
-      },
-    };
-
-    this._rows = rows;
-    this._cells = buildMatrix(this._container, patchProxy, rows, cols, validCheck, this._onChange, (rowId) => {
-      const row = rows.find(r => r.id === rowId);
-      if (row) this._onRemove(row.realId);
-    });
-  }
-
-  _realSourceId(virtualId) {
-    const row = this._rows?.find(r => r.id === virtualId);
-    return row ? row.realId : virtualId;
+    this._cells = buildMatrix(this._container, this.patchBay, rows, cols, validCheck, this._onChange, this._onRemove);
   }
 
   refresh() {
     for (const [key, btn] of this._cells) {
       if (btn.disabled) continue;
       const [source, target] = key.split('->');
-      btn.classList.toggle('active', this.patchBay.isConnected(this._realSourceId(source), target));
+      btn.classList.toggle('active', this.patchBay.isConnected(source, target));
+    }
+  }
+}
+
+/**
+ * TrigPatchMatrixPanel — trigger routing (seq → envelope trigger).
+ */
+export class TrigPatchMatrixPanel {
+  constructor(modPatchBay, activeModules, onChange, onRemove) {
+    this.patchBay = modPatchBay;
+    this._activeModules = activeModules;
+    this._onChange = onChange;
+    this._onRemove = onRemove;
+    this._container = document.getElementById('trig-patch-panel');
+    this._cells = new Map();
+    this.rebuild();
+  }
+
+  rebuild() {
+    const active = [...this._activeModules];
+    const rows = active
+      .filter(id => TRIG_SOURCE_TYPES.has(typeOf(id)))
+      .map(id => ({ id, label: shortLabel(id) }));
+
+    const cols = [];
+    for (const id of active) {
+      const type = typeOf(id);
+      const params = TRIG_PARAMS[type];
+      if (!params) continue;
+      for (const p of params) {
+        cols.push({ id: `${id}.${p.param}`, label: `${shortLabel(id)} ${p.label}` });
+      }
+    }
+
+    const validCheck = (sourceId, targetId) => {
+      const sourceType = typeOf(sourceId);
+      const dotIdx = targetId.lastIndexOf('.');
+      const targetInstanceId = targetId.slice(0, dotIdx);
+      const param = targetId.slice(dotIdx + 1);
+      const targetType = typeOf(targetInstanceId);
+      const typeTarget = `${targetType}.${param}`;
+      return (MOD_CONNECTIONS[sourceType] ?? []).includes(typeTarget);
+    };
+
+    this._cells = buildMatrix(this._container, this.patchBay, rows, cols, validCheck, this._onChange, this._onRemove);
+  }
+
+  refresh() {
+    for (const [key, btn] of this._cells) {
+      if (btn.disabled) continue;
+      const [source, target] = key.split('->');
+      btn.classList.toggle('active', this.patchBay.isConnected(source, target));
     }
   }
 }

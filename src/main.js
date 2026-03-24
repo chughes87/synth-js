@@ -14,7 +14,7 @@ import { SequencerPanel } from './ui/SequencerPanel.js';
 import { AnalyserModule } from './modules/AnalyserModule.js';
 import { OutputModule } from './modules/OutputModule.js';
 import { VisualizerPanel } from './ui/VisualizerPanel.js';
-import { SignalPatchMatrixPanel, ModPatchMatrixPanel } from './ui/PatchMatrixPanel.js';
+import { SignalPatchMatrixPanel, ModPatchMatrixPanel, TrigPatchMatrixPanel } from './ui/PatchMatrixPanel.js';
 import { PatchVisualizerPanel } from './ui/PatchVisualizerPanel.js';
 import { Rack } from './ui/Rack.js';
 
@@ -63,6 +63,7 @@ function onPatchChange() {
 function onModulesChange() {
   signalMatrix.rebuild();
   modMatrix.rebuild();
+  trigMatrix.rebuild();
   patchViz.refresh();
 }
 
@@ -183,6 +184,7 @@ const vizPanel = new VisualizerPanel(analyser);
 const patchViz = new PatchVisualizerPanel(signalPatchBay, modPatchBay, activeModules);
 const signalMatrix = new SignalPatchMatrixPanel(signalPatchBay, activeModules, onPatchChange, removeModule);
 const modMatrix = new ModPatchMatrixPanel(modPatchBay, activeModules, onPatchChange, removeModule);
+const trigMatrix = new TrigPatchMatrixPanel(modPatchBay, activeModules, onPatchChange, removeModule);
 const rack = new Rack(engine, registry, activeModules, signalPatchBay, modPatchBay, vizPanel);
 
 populateModuleSelect();
