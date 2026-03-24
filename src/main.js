@@ -108,22 +108,84 @@ const PRESETS = {
   subtractive: {
     modules: ['osc', 'filter', 'vca', 'output', 'envelope'],
     signal: [[0, 1], [1, 2], [2, 3]],
-    mod: [[4, '3.gain']],
-  },
-  fm: {
-    modules: ['osc', 'output', 'lfo'],
-    signal: [[0, 1]],
-    mod: [[2, '0.freq']],
-  },
-  noisepad: {
-    modules: ['noise', 'filter', 'vca', 'output', 'envelope', 'lfo'],
-    signal: [[0, 1], [1, 2], [2, 3]],
-    mod: [[4, '2.gain'], [5, '1.freq']],
+    mod: [[4, '2.gain']],
   },
   sequenced: {
-    modules: ['seq', 'osc', 'vca', 'output', 'envelope'],
-    signal: [[1, 2], [2, 3]],
-    mod: [[0, '1.freq'], [0, '4.trigger'], [4, '2.gain']],
+    modules: ['seq', 'osc', 'filter', 'vca', 'output', 'envelope'],
+    signal: [[1, 2], [2, 3], [3, 4]],
+    mod: [[0, '1.freq'], [0, '5.trigger'], [5, '3.gain']],
+  },
+  // Two oscillators slightly detuned into same filter — thick unison
+  'dual-detune': {
+    modules: ['osc', 'osc', 'filter', 'vca', 'output', 'envelope'],
+    signal: [[0, 2], [1, 2], [2, 3], [3, 4]],
+    mod: [[5, '3.gain']],
+  },
+  // Two LFOs modulating different params at different rates
+  'cross-mod': {
+    modules: ['osc', 'filter', 'vca', 'output', 'lfo', 'lfo', 'envelope'],
+    signal: [[0, 1], [1, 2], [2, 3]],
+    mod: [[4, '0.freq'], [5, '1.freq'], [6, '2.gain']],
+  },
+  // Sequencer triggering envelope on noise→filter for percussive hits
+  'noise-perc': {
+    modules: ['seq', 'noise', 'filter', 'vca', 'output', 'envelope'],
+    signal: [[1, 2], [2, 3], [3, 4]],
+    mod: [[0, '5.trigger'], [5, '3.gain'], [5, '2.freq']],
+  },
+  // Two sequencers at different tempos hitting different oscillators
+  polyrhythm: {
+    modules: ['seq', 'seq', 'osc', 'osc', 'filter', 'vca', 'output', 'envelope', 'envelope'],
+    signal: [[2, 4], [3, 4], [4, 5], [5, 6]],
+    mod: [[0, '2.freq'], [1, '3.freq'], [0, '7.trigger'], [1, '8.trigger'], [7, '5.gain'], [8, '5.gain']],
+  },
+  // Osc + noise through filter with slow LFO sweep + delay feedback
+  'drone-wash': {
+    modules: ['osc', 'noise', 'filter', 'vca', 'delay', 'output', 'lfo'],
+    signal: [[0, 2], [1, 2], [2, 3], [3, 4], [4, 5]],
+    mod: [[6, '2.freq']],
+  },
+  // FM-ish — LFO at audio-ish rate into osc frequency for metallic tones
+  'fm-bell': {
+    modules: ['osc', 'vca', 'output', 'lfo', 'envelope'],
+    signal: [[0, 1], [1, 2]],
+    mod: [[3, '0.freq'], [4, '1.gain']],
+  },
+  // Noise through two parallel filters into delay — textural chaos
+  'filter-duo': {
+    modules: ['noise', 'filter', 'filter', 'vca', 'delay', 'output', 'lfo', 'lfo'],
+    signal: [[0, 1], [0, 2], [1, 3], [2, 3], [3, 4], [4, 5]],
+    mod: [[6, '1.freq'], [7, '2.freq']],
+  },
+  // Sequenced noise bursts with LFO on filter — glitchy industrial
+  'glitch-seq': {
+    modules: ['seq', 'noise', 'filter', 'vca', 'delay', 'output', 'envelope', 'lfo'],
+    signal: [[1, 2], [2, 3], [3, 4], [4, 5]],
+    mod: [[0, '6.trigger'], [6, '3.gain'], [7, '2.freq'], [7, '2.q']],
+  },
+  // Three oscillators into filter — massive chord drone
+  'triad-drone': {
+    modules: ['osc', 'osc', 'osc', 'filter', 'vca', 'delay', 'output', 'lfo'],
+    signal: [[0, 3], [1, 3], [2, 3], [3, 4], [4, 5], [5, 6]],
+    mod: [[7, '3.freq']],
+  },
+  // Sequencer driving osc + envelope on filter freq for acid bass
+  'acid-bass': {
+    modules: ['seq', 'osc', 'filter', 'vca', 'output', 'envelope', 'envelope'],
+    signal: [[1, 2], [2, 3], [3, 4]],
+    mod: [[0, '1.freq'], [0, '5.trigger'], [0, '6.trigger'], [5, '3.gain'], [6, '2.freq']],
+  },
+  // Two sequencers → two oscs → two filters → delay → out — stereo-ish madness
+  'dual-seq': {
+    modules: ['seq', 'seq', 'osc', 'osc', 'filter', 'filter', 'vca', 'delay', 'output', 'envelope', 'envelope'],
+    signal: [[2, 4], [3, 5], [4, 6], [5, 6], [6, 7], [7, 8]],
+    mod: [[0, '2.freq'], [1, '3.freq'], [0, '9.trigger'], [1, '10.trigger'], [9, '6.gain'], [10, '6.gain']],
+  },
+  // Everything modulating everything — pure chaos
+  'chaos': {
+    modules: ['osc', 'osc', 'noise', 'filter', 'filter', 'vca', 'delay', 'output', 'lfo', 'lfo', 'envelope'],
+    signal: [[0, 3], [1, 4], [2, 3], [2, 4], [3, 5], [4, 5], [5, 6], [6, 7]],
+    mod: [[8, '0.freq'], [9, '1.freq'], [8, '3.freq'], [9, '4.freq'], [8, '3.q'], [9, '4.q'], [10, '5.gain']],
   },
 };
 
