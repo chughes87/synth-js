@@ -59,6 +59,7 @@ const modulePanels = document.getElementById('module-panels');
 
 function onPatchChange() {
   patchViz.refresh();
+  if (rack) rack.onPatchChange();
 }
 
 function onModulesChange() {
@@ -84,6 +85,7 @@ function addModule(type) {
   }
 
   onModulesChange();
+  if (rack) rack.startModule(id);
   return id;
 }
 
@@ -179,7 +181,7 @@ const vizPanel = new VisualizerPanel(analyser);
 const patchViz = new PatchVisualizerPanel(signalPatchBay, modPatchBay, activeModules);
 const signalMatrix = new SignalPatchMatrixPanel(signalPatchBay, activeModules, onPatchChange, removeModule);
 const modMatrix = new ModPatchMatrixPanel(modPatchBay, activeModules, onPatchChange, removeModule);
-new Rack(engine, registry, activeModules, signalPatchBay, modPatchBay, sequencer, vizPanel);
+const rack = new Rack(engine, registry, activeModules, signalPatchBay, modPatchBay, sequencer, vizPanel);
 
 // Start with empty patch
 populateModuleSelect();

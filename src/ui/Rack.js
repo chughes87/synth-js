@@ -20,6 +20,8 @@ export class Rack {
     this.seqPlayBtn = document.getElementById('seq-play-btn');
     this.seqStopBtn = document.getElementById('seq-stop-btn');
 
+    this._running = false;
+
     this.startBtn.addEventListener('click', () => this.start());
     this.stopBtn.addEventListener('click', () => this.stop());
     this.seqPlayBtn.addEventListener('click', () => this.seqPlay());
@@ -91,8 +93,44 @@ export class Rack {
 
     this.modPatchBay.reconnectModulations();
     if (this.visualizer) this.visualizer.start();
+    this._running = true;
     this.startBtn.disabled = true;
     this.stopBtn.disabled = false;
+  }
+
+  get isRunning() {
+    return this._running;
+  }
+
+  /** Start a single module instance if appropriate (used when adding modules while running). */
+  startModule(id) {
+    if (!this._running) return;
+    const m = this._registry.get(id);
+    if (!m) return;
+    const type = typeOf(id);
+    if (type === 'osc' && typeof m.start === 'function') {
+      m.start();
+    }
+    // LFO/envelope/noise will be started when they get connections via onPatchChange
+  }
+
+  /** Called when a connection is toggled while running — starts modules that now need it. */
+  onPatchChange() {
+    if (!this._running) return;
+    for (const id of this._activeModules) {
+      const m = this._registry.get(id);
+      if (!m || typeof m.start !== 'function') continue;
+      const type = typeOf(id);
+      if (type === 'noise' && this._hasSignalConnections(id) && !m.running) {
+        m.start();
+      } else if (type === 'lfo' && this._hasModConnections(id) && !m.running) {
+        m.start();
+      } else if (type === 'envelope' && this._hasModConnections(id) && !m.running) {
+        m.start();
+        m.trigger();
+      }
+    }
+    this.modPatchBay.reconnectModulations();
   }
 
   stop() {
@@ -109,6 +147,7 @@ export class Rack {
 
     this.sequencer.stop();
     if (this.visualizer) this.visualizer.stop();
+    this._running = false;
     this.startBtn.disabled = false;
     this.stopBtn.disabled = true;
     this.seqPlayBtn.disabled = false;
