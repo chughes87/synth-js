@@ -174,13 +174,14 @@ presetSelect.addEventListener('change', () => {
 });
 
 // --- UI panels ---
-new OscillatorPanel(oscillator);
-new OutputPanel(output);
-new FilterPanel(filter);
-new DelayPanel(delay);
-new LFOPanel(lfo);
-new EnvelopePanel(envelope);
-new VCAPanel(vca);
+const modulePanels = document.getElementById('module-panels');
+new OscillatorPanel(oscillator, modulePanels);
+new OutputPanel(output, modulePanels);
+new FilterPanel(filter, modulePanels);
+new DelayPanel(delay, modulePanels);
+new LFOPanel(lfo, modulePanels);
+new EnvelopePanel(envelope, modulePanels);
+new VCAPanel(vca, modulePanels);
 new SequencerPanel(sequencer);
 const vizPanel = new VisualizerPanel(analyser);
 const patchViz = new PatchVisualizerPanel(signalPatchBay, modPatchBay, activeModules);
