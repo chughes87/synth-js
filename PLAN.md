@@ -86,7 +86,8 @@ Goal: expand the synth with filter, delay, noise generator, LFO, and ADSR envelo
 - [x] **21. PatchBay class + tests** — routing engine with audio and modulation connections, validity matrix
 - [x] **22. PatchMatrixPanel UI** — grid table to toggle connections, calls PatchBay methods
 - [x] **23. Integrate PatchBay into main.js + Rack.js** — replace hardcoded chain and checkboxes
-- [ ] **24. Sequencer target dropdown** — routable sequencer
+- [x] **24. Split PatchBay into SignalPatchBay + ModPatchBay** — separate audio routing from modulation routing for cleaner architecture
+- [ ] **25. Sequencer target dropdown** — routable sequencer
 
 ### Verification (end state)
 

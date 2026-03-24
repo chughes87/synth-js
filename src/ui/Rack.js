@@ -2,10 +2,10 @@ import { NOTE_FREQS } from '../modules/SequencerModule.js';
 
 /**
  * Rack wires transport controls to the engine and modules.
- * Uses PatchBay to determine which modules are connected.
+ * Uses SignalPatchBay and ModPatchBay to determine which modules are connected.
  */
 export class Rack {
-  constructor(engine, modules, patchBay, visualizer) {
+  constructor(engine, modules, signalPatchBay, modPatchBay, visualizer) {
     this.engine = engine;
     this.osc = modules.oscillator;
     this.noise = modules.noise;
@@ -16,7 +16,8 @@ export class Rack {
     this.lfo = modules.lfo;
     this.output = modules.output;
     this.sequencer = modules.sequencer;
-    this.patchBay = patchBay;
+    this.signalPatchBay = signalPatchBay;
+    this.modPatchBay = modPatchBay;
     this.visualizer = visualizer;
 
     this.startBtn = document.getElementById('start-btn');
@@ -40,17 +41,21 @@ export class Rack {
   }
 
   _isEnvelopePatched() {
-    return this.patchBay.getConnections().some(c => c.source === 'envelope');
+    return this.modPatchBay.getConnections().some(c => c.source === 'envelope');
+  }
+
+  _hasSignalConnections(sourceId) {
+    return this.signalPatchBay.getConnections().some(c => c.source === sourceId);
   }
 
   _hasModConnections(sourceId) {
-    return this.patchBay.getConnections().some(c => c.source === sourceId);
+    return this.modPatchBay.getConnections().some(c => c.source === sourceId);
   }
 
   async start() {
     await this.engine.start();
     this.osc.start();
-    if (this._hasModConnections('noise')) {
+    if (this._hasSignalConnections('noise')) {
       this.noise.start();
     }
     if (this._hasModConnections('lfo')) {
@@ -60,7 +65,7 @@ export class Rack {
       this.envelope.start();
       this.envelope.trigger();
     }
-    this.patchBay.reconnectModulations();
+    this.modPatchBay.reconnectModulations();
     if (this.visualizer) this.visualizer.start();
     this.startBtn.disabled = true;
     this.stopBtn.disabled = false;
@@ -93,7 +98,7 @@ export class Rack {
     if (this._isEnvelopePatched() && !this.envelope.running) {
       this.envelope.start();
     }
-    this.patchBay.reconnectModulations();
+    this.modPatchBay.reconnectModulations();
     this.sequencer.start();
     if (this.visualizer) this.visualizer.start();
     this.startBtn.disabled = true;

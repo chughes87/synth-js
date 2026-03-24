@@ -1,44 +1,23 @@
 /**
- * PatchBay manages audio and modulation connections between modules.
- * Replaces hardcoded signal chain with user-routable patching.
+ * ModPatchBay manages modulation connections (control-rate signals to AudioParams).
+ * Handles outputNode.connect(audioParam) routing only.
  */
 
 const VALID_CONNECTIONS = {
-  osc:      ['filter', 'vca', 'delay', 'output'],
-  noise:    ['filter', 'vca', 'delay', 'output'],
-  filter:   ['vca', 'delay', 'output'],
-  vca:      ['delay', 'output'],
-  delay:    ['output'],
   lfo:      ['osc.freq', 'filter.freq', 'filter.q', 'vca.gain'],
   envelope: ['osc.freq', 'filter.freq', 'filter.q', 'vca.gain'],
 };
 
-export class PatchBay {
+export class ModPatchBay {
   constructor(modules) {
-    this._modules = modules;
     this._connections = new Set();
 
-    this._audioSources = {
-      osc: modules.osc,
-      noise: modules.noise,
-      filter: modules.filter,
-      vca: modules.vca,
-      delay: modules.delay,
-    };
-
-    this._audioTargets = {
-      filter: modules.filter,
-      vca: modules.vca,
-      delay: modules.delay,
-      output: modules.output,
-    };
-
-    this._modSources = {
+    this._sources = {
       lfo: modules.lfo._depthNode,
       envelope: modules.envelope._outputNode,
     };
 
-    this._modParamGetters = {
+    this._paramGetters = {
       'osc.freq': () => modules.osc._oscillator?.frequency,
       'filter.freq': () => modules.filter._filter.frequency,
       'filter.q': () => modules.filter._filter.Q,
@@ -53,14 +32,6 @@ export class PatchBay {
   _isValid(sourceId, targetId) {
     const allowed = VALID_CONNECTIONS[sourceId];
     return allowed !== undefined && allowed.includes(targetId);
-  }
-
-  _isMod(targetId) {
-    return targetId in this._modParamGetters;
-  }
-
-  _isModSource(sourceId) {
-    return sourceId in this._modSources;
   }
 
   connect(sourceId, targetId) {
@@ -102,41 +73,27 @@ export class PatchBay {
     });
   }
 
-  /** Re-wire modulation connections after source nodes are recreated (e.g. osc.start()). */
+  /** Re-wire all modulation connections (e.g. after osc.start() recreates the OscillatorNode). */
   reconnectModulations() {
     for (const key of this._connections) {
       const [sourceId, targetId] = key.split('->');
-      if (this._isMod(targetId)) {
-        this._wire(sourceId, targetId);
-      }
+      this._wire(sourceId, targetId);
     }
   }
 
   _wire(sourceId, targetId) {
-    if (this._isMod(targetId)) {
-      const param = this._modParamGetters[targetId]();
-      if (param) {
-        this._modSources[sourceId].connect(param);
-      }
-    } else {
-      const source = this._audioSources[sourceId];
-      const target = this._audioTargets[targetId];
-      source.outputNode.connect(target.inputNode);
+    const param = this._paramGetters[targetId]();
+    if (param) {
+      this._sources[sourceId].connect(param);
     }
   }
 
   _unwire(sourceId, targetId) {
-    if (this._isMod(targetId)) {
-      const param = this._modParamGetters[targetId]();
-      if (param) {
-        this._modSources[sourceId].disconnect(param);
-      }
-    } else {
-      const source = this._audioSources[sourceId];
-      const target = this._audioTargets[targetId];
-      source.outputNode.disconnect(target.inputNode);
+    const param = this._paramGetters[targetId]();
+    if (param) {
+      this._sources[sourceId].disconnect(param);
     }
   }
 }
 
-export { VALID_CONNECTIONS };
+export { VALID_CONNECTIONS as MOD_CONNECTIONS };

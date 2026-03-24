@@ -1,90 +1,115 @@
-import { VALID_CONNECTIONS } from '../engine/PatchBay.js';
+import { SIGNAL_CONNECTIONS } from '../engine/SignalPatchBay.js';
+import { MOD_CONNECTIONS } from '../engine/ModPatchBay.js';
 
-const ROWS = [
+const SIGNAL_ROWS = [
   { id: 'osc', label: 'Osc' },
   { id: 'noise', label: 'Noise' },
   { id: 'filter', label: 'Filter' },
   { id: 'vca', label: 'VCA' },
   { id: 'delay', label: 'Delay' },
-  { id: 'lfo', label: 'LFO' },
-  { id: 'envelope', label: 'Env' },
 ];
 
-const COLUMNS = [
+const SIGNAL_COLUMNS = [
   { id: 'filter', label: 'Filter' },
   { id: 'vca', label: 'VCA' },
   { id: 'delay', label: 'Delay' },
   { id: 'output', label: 'Out' },
+];
+
+const MOD_ROWS = [
+  { id: 'lfo', label: 'LFO' },
+  { id: 'envelope', label: 'Env' },
+];
+
+const MOD_COLUMNS = [
   { id: 'osc.freq', label: 'Osc Hz' },
   { id: 'filter.freq', label: 'Flt Hz' },
   { id: 'filter.q', label: 'Flt Q' },
   { id: 'vca.gain', label: 'VCA Gn' },
 ];
 
-/**
- * PatchMatrixPanel renders a grid table for toggling PatchBay connections.
- */
-export class PatchMatrixPanel {
-  constructor(patchBay) {
-    this.patchBay = patchBay;
-    this._cells = new Map();
-    this._buildTable();
+function buildMatrix(containerId, patchBay, rows, columns, validConnections) {
+  const container = document.getElementById(containerId);
+  const table = document.createElement('table');
+  table.className = 'patch-matrix';
+  const cells = new Map();
+
+  // Header row
+  const thead = document.createElement('thead');
+  const headerRow = document.createElement('tr');
+  headerRow.appendChild(document.createElement('th'));
+  for (const col of columns) {
+    const th = document.createElement('th');
+    th.textContent = col.label;
+    headerRow.appendChild(th);
   }
+  thead.appendChild(headerRow);
+  table.appendChild(thead);
 
-  _buildTable() {
-    const container = document.getElementById('patch-matrix-panel');
-    const table = document.createElement('table');
-    table.className = 'patch-matrix';
+  // Body rows
+  const tbody = document.createElement('tbody');
+  for (const row of rows) {
+    const tr = document.createElement('tr');
+    const rowHeader = document.createElement('th');
+    rowHeader.textContent = row.label;
+    tr.appendChild(rowHeader);
 
-    // Header row
-    const thead = document.createElement('thead');
-    const headerRow = document.createElement('tr');
-    headerRow.appendChild(document.createElement('th')); // empty corner
-    for (const col of COLUMNS) {
-      const th = document.createElement('th');
-      th.textContent = col.label;
-      headerRow.appendChild(th);
-    }
-    thead.appendChild(headerRow);
-    table.appendChild(thead);
+    const allowed = validConnections[row.id] ?? [];
+    for (const col of columns) {
+      const td = document.createElement('td');
+      const btn = document.createElement('button');
+      btn.className = 'patch-cell';
 
-    // Body rows
-    const tbody = document.createElement('tbody');
-    for (const row of ROWS) {
-      const tr = document.createElement('tr');
-      const rowHeader = document.createElement('th');
-      rowHeader.textContent = row.label;
-      tr.appendChild(rowHeader);
-
-      const allowed = VALID_CONNECTIONS[row.id] ?? [];
-      for (const col of COLUMNS) {
-        const td = document.createElement('td');
-        const btn = document.createElement('button');
-        btn.className = 'patch-cell';
-
-        if (!allowed.includes(col.id)) {
-          btn.classList.add('disabled');
-          btn.disabled = true;
-        } else {
-          if (this.patchBay.isConnected(row.id, col.id)) {
-            btn.classList.add('active');
-          }
-          btn.addEventListener('click', () => this._onCellClick(btn, row.id, col.id));
+      if (!allowed.includes(col.id)) {
+        btn.classList.add('disabled');
+        btn.disabled = true;
+      } else {
+        if (patchBay.isConnected(row.id, col.id)) {
+          btn.classList.add('active');
         }
-
-        this._cells.set(`${row.id}->${col.id}`, btn);
-        td.appendChild(btn);
-        tr.appendChild(td);
+        btn.addEventListener('click', () => {
+          const connected = patchBay.toggle(row.id, col.id);
+          btn.classList.toggle('active', connected);
+        });
       }
-      tbody.appendChild(tr);
+
+      cells.set(`${row.id}->${col.id}`, btn);
+      td.appendChild(btn);
+      tr.appendChild(td);
     }
-    table.appendChild(tbody);
-    container.appendChild(table);
+    tbody.appendChild(tr);
+  }
+  table.appendChild(tbody);
+  container.appendChild(table);
+
+  return cells;
+}
+
+/**
+ * SignalPatchMatrixPanel renders the audio signal routing grid.
+ */
+export class SignalPatchMatrixPanel {
+  constructor(signalPatchBay) {
+    this.patchBay = signalPatchBay;
+    this._cells = buildMatrix('signal-patch-panel', signalPatchBay, SIGNAL_ROWS, SIGNAL_COLUMNS, SIGNAL_CONNECTIONS);
   }
 
-  _onCellClick(btn, sourceId, targetId) {
-    const connected = this.patchBay.toggle(sourceId, targetId);
-    btn.classList.toggle('active', connected);
+  refresh() {
+    for (const [key, btn] of this._cells) {
+      if (btn.disabled) continue;
+      const [source, target] = key.split('->');
+      btn.classList.toggle('active', this.patchBay.isConnected(source, target));
+    }
+  }
+}
+
+/**
+ * ModPatchMatrixPanel renders the modulation routing grid.
+ */
+export class ModPatchMatrixPanel {
+  constructor(modPatchBay) {
+    this.patchBay = modPatchBay;
+    this._cells = buildMatrix('mod-patch-panel', modPatchBay, MOD_ROWS, MOD_COLUMNS, MOD_CONNECTIONS);
   }
 
   refresh() {
