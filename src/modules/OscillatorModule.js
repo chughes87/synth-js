@@ -50,6 +50,11 @@ export class OscillatorModule extends BaseModule {
     this._oscillator.start();
   }
 
+  getModParam(name) {
+    if (name === 'freq') return this._oscillator?.frequency;
+    return undefined;
+  }
+
   stop() {
     if (!this._oscillator) {
       return;

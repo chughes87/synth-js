@@ -1,51 +1,42 @@
 import { SIGNAL_CONNECTIONS } from '../engine/SignalPatchBay.js';
 import { MOD_CONNECTIONS } from '../engine/ModPatchBay.js';
+import { typeOf } from '../engine/ModuleRegistry.js';
 
-const ALL_SIGNAL_ROWS = [
-  { id: 'osc', label: 'Osc' },
-  { id: 'noise', label: 'Noise' },
-  { id: 'filter', label: 'Filter' },
-  { id: 'vca', label: 'VCA' },
-  { id: 'delay', label: 'Delay' },
-];
-
-const ALL_SIGNAL_COLUMNS = [
-  { id: 'filter', label: 'Filter' },
-  { id: 'vca', label: 'VCA' },
-  { id: 'delay', label: 'Delay' },
-  { id: 'output', label: 'Out' },
-];
-
-const ALL_MOD_ROWS = [
-  { id: 'lfo', label: 'LFO' },
-  { id: 'envelope', label: 'Env' },
-];
-
-const ALL_MOD_COLUMNS = [
-  { id: 'osc.freq', label: 'Osc Hz' },
-  { id: 'filter.freq', label: 'Flt Hz' },
-  { id: 'filter.q', label: 'Flt Q' },
-  { id: 'vca.gain', label: 'VCA Gn' },
-];
-
-// Map mod target IDs to their parent module
-const MOD_TARGET_MODULE = {
-  'osc.freq': 'osc',
-  'filter.freq': 'filter',
-  'filter.q': 'filter',
-  'vca.gain': 'vca',
+// Module types that can be signal sources (rows)
+const SIGNAL_SOURCE_TYPES = new Set(Object.keys(SIGNAL_CONNECTIONS));
+// Module types that can be signal targets (columns)
+const SIGNAL_TARGET_TYPES = new Set(Object.values(SIGNAL_CONNECTIONS).flat());
+// Module types that can be mod sources (rows)
+const MOD_SOURCE_TYPES = new Set(Object.keys(MOD_CONNECTIONS));
+// Mod param names per target type
+const MOD_PARAMS = {
+  osc: [{ param: 'freq', label: 'Hz' }],
+  filter: [{ param: 'freq', label: 'Hz' }, { param: 'q', label: 'Q' }],
+  vca: [{ param: 'gain', label: 'Gn' }],
 };
 
-function buildMatrix(container, patchBay, rows, columns, validConnections, onChange, onRemove) {
-  container.querySelectorAll('table').forEach(t => t.remove());
+function labelFor(instanceId) {
+  const type = typeOf(instanceId);
+  const num = instanceId.slice(type.length + 1);
+  const name = type.charAt(0).toUpperCase() + type.slice(1);
+  return `${name} ${num}`;
+}
 
+function shortLabel(instanceId) {
+  const type = typeOf(instanceId);
+  const num = instanceId.slice(type.length + 1);
+  const SHORT = { osc: 'Osc', noise: 'Nse', filter: 'Flt', vca: 'VCA', delay: 'Dly', output: 'Out', lfo: 'LFO', envelope: 'Env' };
+  return `${SHORT[type] ?? type} ${num}`;
+}
+
+function buildMatrix(container, patchBay, rows, columns, validCheck, onChange, onRemove) {
+  container.querySelectorAll('table').forEach(t => t.remove());
   if (rows.length === 0 || columns.length === 0) return new Map();
 
   const table = document.createElement('table');
   table.className = 'patch-matrix';
   const cells = new Map();
 
-  // Header row
   const thead = document.createElement('thead');
   const headerRow = document.createElement('tr');
   headerRow.appendChild(document.createElement('th'));
@@ -57,7 +48,6 @@ function buildMatrix(container, patchBay, rows, columns, validConnections, onCha
   thead.appendChild(headerRow);
   table.appendChild(thead);
 
-  // Body rows
   const tbody = document.createElement('tbody');
   for (const row of rows) {
     const tr = document.createElement('tr');
@@ -72,17 +62,15 @@ function buildMatrix(container, patchBay, rows, columns, validConnections, onCha
       rowHeader.appendChild(removeBtn);
     }
 
-    const label = document.createTextNode(row.label);
-    rowHeader.appendChild(label);
+    rowHeader.appendChild(document.createTextNode(row.label));
     tr.appendChild(rowHeader);
 
-    const allowed = validConnections[row.id] ?? [];
     for (const col of columns) {
       const td = document.createElement('td');
       const btn = document.createElement('button');
       btn.className = 'patch-cell';
 
-      if (!allowed.includes(col.id)) {
+      if (!validCheck(row.id, col.id)) {
         btn.classList.add('disabled');
         btn.disabled = true;
       } else {
@@ -104,13 +92,11 @@ function buildMatrix(container, patchBay, rows, columns, validConnections, onCha
   }
   table.appendChild(tbody);
   container.appendChild(table);
-
   return cells;
 }
 
 /**
- * SignalPatchMatrixPanel renders the audio signal routing grid.
- * Only shows rows/columns for active modules.
+ * SignalPatchMatrixPanel — dynamic rows/columns based on active instance IDs.
  */
 export class SignalPatchMatrixPanel {
   constructor(signalPatchBay, activeModules, onChange, onRemove) {
@@ -124,9 +110,21 @@ export class SignalPatchMatrixPanel {
   }
 
   rebuild() {
-    const rows = ALL_SIGNAL_ROWS.filter(r => this._activeModules.has(r.id));
-    const cols = ALL_SIGNAL_COLUMNS.filter(c => this._activeModules.has(c.id));
-    this._cells = buildMatrix(this._container, this.patchBay, rows, cols, SIGNAL_CONNECTIONS, this._onChange, this._onRemove);
+    const active = [...this._activeModules];
+    const rows = active
+      .filter(id => SIGNAL_SOURCE_TYPES.has(typeOf(id)))
+      .map(id => ({ id, label: shortLabel(id) }));
+    const cols = active
+      .filter(id => SIGNAL_TARGET_TYPES.has(typeOf(id)))
+      .map(id => ({ id, label: shortLabel(id) }));
+
+    const validCheck = (sourceId, targetId) => {
+      const sourceType = typeOf(sourceId);
+      const targetType = typeOf(targetId);
+      return (SIGNAL_CONNECTIONS[sourceType] ?? []).includes(targetType);
+    };
+
+    this._cells = buildMatrix(this._container, this.patchBay, rows, cols, validCheck, this._onChange, this._onRemove);
   }
 
   refresh() {
@@ -139,8 +137,7 @@ export class SignalPatchMatrixPanel {
 }
 
 /**
- * ModPatchMatrixPanel renders the modulation routing grid.
- * Only shows rows for active mod sources, columns for active target modules.
+ * ModPatchMatrixPanel — rows are mod source instances, columns are modTarget instances with params.
  */
 export class ModPatchMatrixPanel {
   constructor(modPatchBay, activeModules, onChange, onRemove) {
@@ -154,9 +151,33 @@ export class ModPatchMatrixPanel {
   }
 
   rebuild() {
-    const rows = ALL_MOD_ROWS.filter(r => this._activeModules.has(r.id));
-    const cols = ALL_MOD_COLUMNS.filter(c => this._activeModules.has(MOD_TARGET_MODULE[c.id]));
-    this._cells = buildMatrix(this._container, this.patchBay, rows, cols, MOD_CONNECTIONS, this._onChange, this._onRemove);
+    const active = [...this._activeModules];
+    const rows = active
+      .filter(id => MOD_SOURCE_TYPES.has(typeOf(id)))
+      .map(id => ({ id, label: shortLabel(id) }));
+
+    // Build columns: for each active target module, add a column per param
+    const cols = [];
+    for (const id of active) {
+      const type = typeOf(id);
+      const params = MOD_PARAMS[type];
+      if (!params) continue;
+      for (const p of params) {
+        cols.push({ id: `${id}.${p.param}`, label: `${shortLabel(id)} ${p.label}` });
+      }
+    }
+
+    const validCheck = (sourceId, targetId) => {
+      const sourceType = typeOf(sourceId);
+      const dotIdx = targetId.lastIndexOf('.');
+      const targetInstanceId = targetId.slice(0, dotIdx);
+      const param = targetId.slice(dotIdx + 1);
+      const targetType = typeOf(targetInstanceId);
+      const typeTarget = `${targetType}.${param}`;
+      return (MOD_CONNECTIONS[sourceType] ?? []).includes(typeTarget);
+    };
+
+    this._cells = buildMatrix(this._container, this.patchBay, rows, cols, validCheck, this._onChange, this._onRemove);
   }
 
   refresh() {

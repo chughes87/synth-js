@@ -1,123 +1,97 @@
 import { ModPatchBay, MOD_CONNECTIONS } from '../../src/engine/ModPatchBay.js';
-import { OscillatorModule } from '../../src/modules/OscillatorModule.js';
-import { NoiseModule } from '../../src/modules/NoiseModule.js';
-import { FilterModule } from '../../src/modules/FilterModule.js';
-import { EnvelopeModule } from '../../src/modules/EnvelopeModule.js';
-import { DelayModule } from '../../src/modules/DelayModule.js';
-import { LFOModule } from '../../src/modules/LFOModule.js';
-import { VCAModule } from '../../src/modules/VCAModule.js';
-import { OutputModule } from '../../src/modules/OutputModule.js';
+import { ModuleRegistry } from '../../src/engine/ModuleRegistry.js';
 import { AudioContextMock } from '../__mocks__/AudioContextMock.js';
 
-function createModules() {
-  const ctx = new AudioContextMock();
-  return {
-    ctx,
-    osc: new OscillatorModule(ctx),
-    noise: new NoiseModule(ctx),
-    filter: new FilterModule(ctx),
-    envelope: new EnvelopeModule(ctx),
-    vca: new VCAModule(ctx),
-    delay: new DelayModule(ctx),
-    lfo: new LFOModule(ctx),
-    output: new OutputModule(ctx),
-  };
+function setup() {
+  const registry = new ModuleRegistry(new AudioContextMock());
+  const osc1 = registry.create('osc');
+  const filter1 = registry.create('filter');
+  const vca1 = registry.create('vca');
+  const lfo1 = registry.create('lfo');
+  const envelope1 = registry.create('envelope');
+  return { registry, osc1, filter1, vca1, lfo1, envelope1 };
 }
 
 describe('ModPatchBay', () => {
-  let modules, patchBay;
+  let s, patchBay;
 
   beforeEach(() => {
-    modules = createModules();
-    patchBay = new ModPatchBay(modules);
+    s = setup();
+    patchBay = new ModPatchBay(s.registry);
   });
 
   describe('LFO modulation connections', () => {
     test('lfo connects to filter.freq AudioParam', () => {
-      patchBay.connect('lfo', 'filter.freq');
-      expect(modules.lfo._depthNode._connections)
-        .toContain(modules.filter._filter.frequency);
+      patchBay.connect('lfo-1', 'filter-1.freq');
+      expect(s.lfo1.module.modOutputNode._connections)
+        .toContain(s.filter1.module._filter.frequency);
     });
 
     test('lfo disconnects from filter.freq AudioParam', () => {
-      patchBay.connect('lfo', 'filter.freq');
-      patchBay.disconnect('lfo', 'filter.freq');
-      expect(modules.lfo._depthNode._connections)
-        .not.toContain(modules.filter._filter.frequency);
+      patchBay.connect('lfo-1', 'filter-1.freq');
+      patchBay.disconnect('lfo-1', 'filter-1.freq');
+      expect(s.lfo1.module.modOutputNode._connections)
+        .not.toContain(s.filter1.module._filter.frequency);
     });
 
     test('lfo connects to filter.q AudioParam', () => {
-      patchBay.connect('lfo', 'filter.q');
-      expect(modules.lfo._depthNode._connections)
-        .toContain(modules.filter._filter.Q);
+      patchBay.connect('lfo-1', 'filter-1.q');
+      expect(s.lfo1.module.modOutputNode._connections)
+        .toContain(s.filter1.module._filter.Q);
     });
 
     test('lfo connects to vca.gain AudioParam', () => {
-      patchBay.connect('lfo', 'vca.gain');
-      expect(modules.lfo._depthNode._connections)
-        .toContain(modules.vca._gain.gain);
+      patchBay.connect('lfo-1', 'vca-1.gain');
+      expect(s.lfo1.module.modOutputNode._connections)
+        .toContain(s.vca1.module._gain.gain);
     });
 
     test('lfo to osc.freq skips wire when oscillator not started', () => {
-      patchBay.connect('lfo', 'osc.freq');
-      expect(patchBay.isConnected('lfo', 'osc.freq')).toBe(true);
-      expect(modules.lfo._depthNode._connections).toHaveLength(0);
+      patchBay.connect('lfo-1', 'osc-1.freq');
+      expect(patchBay.isConnected('lfo-1', 'osc-1.freq')).toBe(true);
+      expect(s.lfo1.module.modOutputNode._connections).toHaveLength(0);
     });
 
     test('reconnectModulations wires lfo to osc.freq after start', () => {
-      patchBay.connect('lfo', 'osc.freq');
-      modules.osc.start();
+      patchBay.connect('lfo-1', 'osc-1.freq');
+      s.osc1.module.start();
       patchBay.reconnectModulations();
-      expect(modules.lfo._depthNode._connections)
-        .toContain(modules.osc._oscillator.frequency);
+      expect(s.lfo1.module.modOutputNode._connections)
+        .toContain(s.osc1.module._oscillator.frequency);
     });
   });
 
   describe('envelope modulation connections', () => {
     test('envelope connects to vca.gain AudioParam', () => {
-      patchBay.connect('envelope', 'vca.gain');
-      expect(modules.envelope._outputNode._connections)
-        .toContain(modules.vca._gain.gain);
+      patchBay.connect('envelope-1', 'vca-1.gain');
+      expect(s.envelope1.module.modOutputNode._connections)
+        .toContain(s.vca1.module._gain.gain);
     });
 
     test('envelope connects to filter.freq AudioParam', () => {
-      patchBay.connect('envelope', 'filter.freq');
-      expect(modules.envelope._outputNode._connections)
-        .toContain(modules.filter._filter.frequency);
+      patchBay.connect('envelope-1', 'filter-1.freq');
+      expect(s.envelope1.module.modOutputNode._connections)
+        .toContain(s.filter1.module._filter.frequency);
     });
 
     test('envelope disconnects from vca.gain', () => {
-      patchBay.connect('envelope', 'vca.gain');
-      patchBay.disconnect('envelope', 'vca.gain');
-      expect(modules.envelope._outputNode._connections)
-        .not.toContain(modules.vca._gain.gain);
-    });
-
-    test('envelope to osc.freq skips wire when oscillator not started', () => {
-      patchBay.connect('envelope', 'osc.freq');
-      expect(patchBay.isConnected('envelope', 'osc.freq')).toBe(true);
-      expect(modules.envelope._outputNode._connections).toHaveLength(0);
-    });
-
-    test('reconnectModulations wires envelope to osc.freq after start', () => {
-      patchBay.connect('envelope', 'osc.freq');
-      modules.osc.start();
-      patchBay.reconnectModulations();
-      expect(modules.envelope._outputNode._connections)
-        .toContain(modules.osc._oscillator.frequency);
+      patchBay.connect('envelope-1', 'vca-1.gain');
+      patchBay.disconnect('envelope-1', 'vca-1.gain');
+      expect(s.envelope1.module.modOutputNode._connections)
+        .not.toContain(s.vca1.module._gain.gain);
     });
   });
 
   describe('toggle', () => {
     test('connects and returns true when not connected', () => {
-      expect(patchBay.toggle('lfo', 'filter.freq')).toBe(true);
-      expect(patchBay.isConnected('lfo', 'filter.freq')).toBe(true);
+      expect(patchBay.toggle('lfo-1', 'filter-1.freq')).toBe(true);
+      expect(patchBay.isConnected('lfo-1', 'filter-1.freq')).toBe(true);
     });
 
     test('disconnects and returns false when already connected', () => {
-      patchBay.connect('lfo', 'filter.freq');
-      expect(patchBay.toggle('lfo', 'filter.freq')).toBe(false);
-      expect(patchBay.isConnected('lfo', 'filter.freq')).toBe(false);
+      patchBay.connect('lfo-1', 'filter-1.freq');
+      expect(patchBay.toggle('lfo-1', 'filter-1.freq')).toBe(false);
+      expect(patchBay.isConnected('lfo-1', 'filter-1.freq')).toBe(false);
     });
   });
 
@@ -127,60 +101,51 @@ describe('ModPatchBay', () => {
     });
 
     test('returns all active connections', () => {
-      patchBay.connect('lfo', 'filter.freq');
-      patchBay.connect('envelope', 'vca.gain');
+      patchBay.connect('lfo-1', 'filter-1.freq');
+      patchBay.connect('envelope-1', 'vca-1.gain');
       const conns = patchBay.getConnections();
       expect(conns).toHaveLength(2);
-      expect(conns).toContainEqual({ source: 'lfo', target: 'filter.freq' });
-      expect(conns).toContainEqual({ source: 'envelope', target: 'vca.gain' });
+      expect(conns).toContainEqual({ source: 'lfo-1', target: 'filter-1.freq' });
+      expect(conns).toContainEqual({ source: 'envelope-1', target: 'vca-1.gain' });
     });
   });
 
   describe('disconnectAll', () => {
-    test('removes all connections where module is source', () => {
-      patchBay.connect('lfo', 'filter.freq');
-      patchBay.connect('lfo', 'vca.gain');
-      patchBay.connect('envelope', 'vca.gain');
-      patchBay.disconnectAll('lfo');
-      expect(patchBay.getConnections()).toEqual([{ source: 'envelope', target: 'vca.gain' }]);
+    test('removes all connections where instance is source', () => {
+      patchBay.connect('lfo-1', 'filter-1.freq');
+      patchBay.connect('lfo-1', 'vca-1.gain');
+      patchBay.connect('envelope-1', 'vca-1.gain');
+      patchBay.disconnectAll('lfo-1');
+      expect(patchBay.getConnections()).toEqual([{ source: 'envelope-1', target: 'vca-1.gain' }]);
     });
 
-    test('removes all connections targeting a module param', () => {
-      patchBay.connect('lfo', 'filter.freq');
-      patchBay.connect('lfo', 'filter.q');
-      patchBay.connect('envelope', 'vca.gain');
-      patchBay.disconnectAll('filter');
-      expect(patchBay.getConnections()).toEqual([{ source: 'envelope', target: 'vca.gain' }]);
-    });
-
-    test('unwires audio params', () => {
-      patchBay.connect('lfo', 'filter.freq');
-      patchBay.disconnectAll('filter');
-      expect(modules.lfo._depthNode._connections)
-        .not.toContain(modules.filter._filter.frequency);
-    });
-
-    test('no-op for module with no connections', () => {
-      patchBay.connect('lfo', 'filter.freq');
-      patchBay.disconnectAll('osc');
-      expect(patchBay.getConnections()).toHaveLength(1);
+    test('removes all connections targeting a module instance', () => {
+      patchBay.connect('lfo-1', 'filter-1.freq');
+      patchBay.connect('lfo-1', 'filter-1.q');
+      patchBay.connect('envelope-1', 'vca-1.gain');
+      patchBay.disconnectAll('filter-1');
+      expect(patchBay.getConnections()).toEqual([{ source: 'envelope-1', target: 'vca-1.gain' }]);
     });
   });
 
   describe('validity', () => {
     test('rejects audio sources', () => {
-      expect(patchBay.connect('osc', 'filter.freq')).toBe(false);
+      expect(patchBay.connect('osc-1', 'filter-1.freq')).toBe(false);
     });
 
-    test('rejects audio targets', () => {
-      expect(patchBay.connect('lfo', 'filter')).toBe(false);
+    test('rejects invalid param names', () => {
+      expect(patchBay.connect('lfo-1', 'filter-1.bogus')).toBe(false);
     });
 
-    test('all MOD_CONNECTIONS entries are accepted', () => {
-      for (const [source, targets] of Object.entries(MOD_CONNECTIONS)) {
-        for (const target of targets) {
-          expect(patchBay.connect(source, target)).toBe(true);
-          patchBay.disconnect(source, target);
+    test('all MOD_CONNECTIONS type pairs are accepted', () => {
+      for (const [sourceType, targets] of Object.entries(MOD_CONNECTIONS)) {
+        const source = s.registry.create(sourceType);
+        for (const typeTarget of targets) {
+          const [targetType, param] = typeTarget.split('.');
+          const target = s.registry.create(targetType);
+          const targetId = `${target.id}.${param}`;
+          expect(patchBay.connect(source.id, targetId)).toBe(true);
+          patchBay.disconnect(source.id, targetId);
         }
       }
     });

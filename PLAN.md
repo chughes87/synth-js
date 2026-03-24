@@ -88,7 +88,7 @@ Goal: expand the synth with filter, delay, noise generator, LFO, and ADSR envelo
 - [x] **23. Integrate PatchBay into main.js + Rack.js** — replace hardcoded chain and checkboxes
 - [x] **24. Split PatchBay into SignalPatchBay + ModPatchBay** — separate audio routing from modulation routing for cleaner architecture
 - [x] **25. Dynamic panel DOM generation** — panels create their own DOM, removing hardcoded HTML dependency
-- [ ] **26. Multi-instance modules** — ModuleRegistry, instance IDs, patch bays use registry, picker allows duplicates
+- [x] **26. Multi-instance modules** — ModuleRegistry, instance IDs, patch bays use registry, picker allows duplicates
 - [ ] **27. Sequencer target dropdown** — routable sequencer
 
 ### Verification (end state)

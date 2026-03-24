@@ -21,4 +21,9 @@ export class VCAModule extends BaseModule {
   set gain(value) {
     this._gain.gain.value = Math.max(0, Math.min(1, value));
   }
+
+  getModParam(name) {
+    if (name === 'gain') return this._gain.gain;
+    return undefined;
+  }
 }
