@@ -6,8 +6,10 @@ import { typeOf } from '../engine/ModuleRegistry.js';
 const SIGNAL_SOURCE_TYPES = new Set(Object.keys(SIGNAL_CONNECTIONS));
 // Module types that can be signal targets (columns)
 const SIGNAL_TARGET_TYPES = new Set(Object.values(SIGNAL_CONNECTIONS).flat());
-// Module types that can be mod sources (rows)
-const MOD_SOURCE_TYPES = new Set(Object.keys(MOD_CONNECTIONS));
+// Module types that can be mod (CV) sources — exclude control-only types
+const MOD_SOURCE_TYPES = new Set(
+  Object.keys(MOD_CONNECTIONS).filter(t => t !== 'trigger' && t !== 'clock')
+);
 
 // CV mod params (continuous modulation targets)
 const CV_PARAMS = {
