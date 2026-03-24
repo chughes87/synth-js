@@ -37,4 +37,9 @@ export class FilterModule extends BaseModule {
     this._filter.type = value;
   }
 
+  getModParam(name) {
+    if (name === 'freq') return this._filter.frequency;
+    if (name === 'q') return this._filter.Q;
+    return undefined;
+  }
 }

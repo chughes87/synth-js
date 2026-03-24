@@ -1,41 +1,30 @@
 /**
- * PatchVisualizerPanel draws a node graph of the current patch configuration.
+ * PatchVisualizerPanel draws a node graph of active module instances.
  * Signal connections are solid lines, modulation connections are dashed.
+ * Positions are computed dynamically based on active instances.
  */
+
+import { typeOf, splitModTarget } from '../engine/ModuleRegistry.js';
 
 const NODE_W = 64;
 const NODE_H = 32;
 const PADDING = 20;
 
-// Node positions as fractions of canvas [x, y] — laid out left-to-right signal flow
-const NODE_POSITIONS = {
-  osc:      [0.08, 0.22],
-  noise:    [0.08, 0.50],
-  filter:   [0.30, 0.22],
-  vca:      [0.52, 0.22],
-  delay:    [0.52, 0.50],
-  output:   [0.74, 0.36],
-  lfo:      [0.08, 0.78],
-  envelope: [0.30, 0.78],
+// Column positions by role (fractional x)
+const COLUMN_X = {
+  source: 0.08,    // osc, noise
+  process: 0.30,   // filter
+  amp: 0.52,       // vca, delay
+  output: 0.74,    // output
+  mod: 0.08,       // lfo, envelope (bottom row)
 };
 
-// Mod target positions — where the arrow lands on the target module
-const MOD_TARGET_NODES = {
-  'osc.freq':    'osc',
-  'filter.freq': 'filter',
-  'filter.q':    'filter',
-  'vca.gain':    'vca',
-};
-
-const NODE_LABELS = {
-  osc: 'OSC',
-  noise: 'NOISE',
-  filter: 'FLT',
-  vca: 'VCA',
-  delay: 'DLY',
-  output: 'OUT',
-  lfo: 'LFO',
-  envelope: 'ENV',
+const TYPE_COLUMN = {
+  osc: 'source', noise: 'source',
+  filter: 'process',
+  vca: 'amp', delay: 'amp',
+  output: 'output',
+  lfo: 'mod', envelope: 'mod',
 };
 
 const SIGNAL_COLOR = '#e94560';
@@ -45,10 +34,18 @@ const NODE_BORDER = '#1a1a4e';
 const NODE_TEXT = '#e0e0e0';
 const BG_COLOR = '#0a0a1a';
 
+function shortLabel(instanceId) {
+  const type = typeOf(instanceId);
+  const num = instanceId.slice(type.length + 1);
+  const SHORT = { osc: 'OSC', noise: 'NSE', filter: 'FLT', vca: 'VCA', delay: 'DLY', output: 'OUT', lfo: 'LFO', envelope: 'ENV' };
+  return `${SHORT[type] ?? type} ${num}`;
+}
+
 export class PatchVisualizerPanel {
-  constructor(signalPatchBay, modPatchBay) {
+  constructor(signalPatchBay, modPatchBay, activeModules) {
     this.signalPatchBay = signalPatchBay;
     this.modPatchBay = modPatchBay;
+    this._activeModules = activeModules;
     this.canvas = document.getElementById('patch-viz-canvas');
     this.ctx = this.canvas.getContext('2d');
 
@@ -66,6 +63,47 @@ export class PatchVisualizerPanel {
     this.canvas.height = 200;
   }
 
+  _computePositions(w, h) {
+    const active = [...this._activeModules];
+    const MOD_TYPES = new Set(['lfo', 'envelope']);
+
+    // Group by column
+    const columns = {};
+    for (const id of active) {
+      const type = typeOf(id);
+      const col = TYPE_COLUMN[type] ?? 'source';
+      const isModRow = MOD_TYPES.has(type);
+      const key = isModRow ? `${col}_mod` : col;
+      if (!columns[key]) columns[key] = [];
+      columns[key].push(id);
+    }
+
+    // Assign x per column key, y by index within column
+    const colXMap = {
+      source: 0.08, process: 0.30, amp: 0.52, output: 0.74,
+      source_mod: 0.08, process_mod: 0.30, amp_mod: 0.52,
+      mod_mod: 0.08,
+    };
+
+    const nodes = {};
+    for (const [key, ids] of Object.entries(columns)) {
+      const fx = colXMap[key] ?? 0.5;
+      const isMod = key.endsWith('_mod');
+      const yStart = isMod ? 0.65 : 0.05;
+      const yRange = isMod ? 0.30 : 0.55;
+      const step = ids.length > 1 ? yRange / (ids.length - 1) : 0;
+
+      for (let i = 0; i < ids.length; i++) {
+        const fy = ids.length === 1 ? yStart + yRange * 0.3 : yStart + step * i;
+        nodes[ids[i]] = {
+          x: PADDING + fx * (w - 2 * PADDING - NODE_W),
+          y: PADDING + fy * (h - 2 * PADDING - NODE_H),
+        };
+      }
+    }
+    return nodes;
+  }
+
   refresh() {
     const { ctx, canvas } = this;
     const w = canvas.width;
@@ -74,36 +112,29 @@ export class PatchVisualizerPanel {
     ctx.fillStyle = BG_COLOR;
     ctx.fillRect(0, 0, w, h);
 
-    // Compute pixel positions
-    const nodes = {};
-    for (const [id, [fx, fy]] of Object.entries(NODE_POSITIONS)) {
-      nodes[id] = {
-        x: PADDING + fx * (w - 2 * PADDING - NODE_W),
-        y: PADDING + fy * (h - 2 * PADDING - NODE_H),
-      };
-    }
+    const nodes = this._computePositions(w, h);
 
     // Draw signal connections
-    const signalConns = this.signalPatchBay.getConnections();
-    for (const { source, target } of signalConns) {
-      this._drawConnection(ctx, nodes[source], nodes[target], SIGNAL_COLOR, false);
-    }
-
-    // Draw mod connections
-    const modConns = this.modPatchBay.getConnections();
-    for (const { source, target } of modConns) {
-      const targetNode = MOD_TARGET_NODES[target];
-      if (targetNode && nodes[targetNode]) {
-        this._drawConnection(ctx, nodes[source], nodes[targetNode], MOD_COLOR, true);
+    for (const { source, target } of this.signalPatchBay.getConnections()) {
+      if (nodes[source] && nodes[target]) {
+        this._drawConnection(ctx, nodes[source], nodes[target], SIGNAL_COLOR, false);
       }
     }
 
-    // Draw nodes on top
-    for (const [id, pos] of Object.entries(nodes)) {
-      this._drawNode(ctx, pos, NODE_LABELS[id], id);
+    // Draw mod connections
+    for (const { source, target } of this.modPatchBay.getConnections()) {
+      const [targetInstanceId] = splitModTarget(target);
+      if (nodes[source] && nodes[targetInstanceId]) {
+        this._drawConnection(ctx, nodes[source], nodes[targetInstanceId], MOD_COLOR, true);
+      }
     }
 
-    // Legend
+    // Draw nodes
+    for (const [id, pos] of Object.entries(nodes)) {
+      const isMod = new Set(['lfo', 'envelope']).has(typeOf(id));
+      this._drawNode(ctx, pos, shortLabel(id), isMod);
+    }
+
     this._drawLegend(ctx, w, h);
   }
 
@@ -118,9 +149,8 @@ export class PatchVisualizerPanel {
     ctx.lineWidth = 2;
     if (dashed) ctx.setLineDash([6, 4]);
 
-    ctx.beginPath();
-    // Bezier curve for smooth routing
     const cpOffset = Math.abs(endX - startX) * 0.4;
+    ctx.beginPath();
     ctx.moveTo(startX, startY);
     ctx.bezierCurveTo(startX + cpOffset, startY, endX - cpOffset, endY, endX, endY);
     ctx.stroke();
@@ -135,24 +165,21 @@ export class PatchVisualizerPanel {
     ctx.lineTo(endX - 8 * Math.cos(angle + 0.4), endY - 8 * Math.sin(angle + 0.4));
     ctx.closePath();
     ctx.fill();
-
     ctx.restore();
   }
 
-  _drawNode(ctx, pos, label, id) {
+  _drawNode(ctx, pos, label, isMod) {
     const { x, y } = pos;
-    const isModSource = id === 'lfo' || id === 'envelope';
-
     ctx.fillStyle = NODE_BG;
-    ctx.strokeStyle = isModSource ? MOD_COLOR : NODE_BORDER;
-    ctx.lineWidth = isModSource ? 1.5 : 1;
+    ctx.strokeStyle = isMod ? MOD_COLOR : NODE_BORDER;
+    ctx.lineWidth = isMod ? 1.5 : 1;
     ctx.beginPath();
     ctx.roundRect(x, y, NODE_W, NODE_H, 4);
     ctx.fill();
     ctx.stroke();
 
     ctx.fillStyle = NODE_TEXT;
-    ctx.font = '11px "Courier New", monospace';
+    ctx.font = '10px "Courier New", monospace';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(label, x + NODE_W / 2, y + NODE_H / 2);
@@ -161,12 +188,10 @@ export class PatchVisualizerPanel {
   _drawLegend(ctx, w, h) {
     const y = h - 12;
     const startX = w - 200;
-
     ctx.font = '10px "Courier New", monospace';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
 
-    // Signal
     ctx.strokeStyle = SIGNAL_COLOR;
     ctx.lineWidth = 2;
     ctx.setLineDash([]);
@@ -177,7 +202,6 @@ export class PatchVisualizerPanel {
     ctx.fillStyle = '#a0a0b0';
     ctx.fillText('signal', startX + 26, y);
 
-    // Mod
     ctx.strokeStyle = MOD_COLOR;
     ctx.setLineDash([6, 4]);
     ctx.beginPath();

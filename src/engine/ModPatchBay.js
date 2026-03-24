@@ -1,7 +1,10 @@
 /**
  * ModPatchBay manages modulation connections (control-rate signals to AudioParams).
- * Handles outputNode.connect(audioParam) routing only.
+ * Uses ModuleRegistry for dynamic lookups. Mod targets use instance-based IDs
+ * like 'filter-1.freq' instead of 'filter.freq'.
  */
+
+import { typeOf, splitModTarget } from './ModuleRegistry.js';
 
 const VALID_CONNECTIONS = {
   lfo:      ['osc.freq', 'filter.freq', 'filter.q', 'vca.gain'],
@@ -9,20 +12,9 @@ const VALID_CONNECTIONS = {
 };
 
 export class ModPatchBay {
-  constructor(modules) {
+  constructor(registry) {
+    this._registry = registry;
     this._connections = new Set();
-
-    this._sources = {
-      lfo: modules.lfo._depthNode,
-      envelope: modules.envelope._outputNode,
-    };
-
-    this._paramGetters = {
-      'osc.freq': () => modules.osc._oscillator?.frequency,
-      'filter.freq': () => modules.filter._filter.frequency,
-      'filter.q': () => modules.filter._filter.Q,
-      'vca.gain': () => modules.vca._gain.gain,
-    };
   }
 
   _key(sourceId, targetId) {
@@ -30,8 +22,12 @@ export class ModPatchBay {
   }
 
   _isValid(sourceId, targetId) {
-    const allowed = VALID_CONNECTIONS[sourceId];
-    return allowed !== undefined && allowed.includes(targetId);
+    const sourceType = typeOf(sourceId);
+    const [targetInstanceId, param] = splitModTarget(targetId);
+    const targetType = typeOf(targetInstanceId);
+    const typeTarget = `${targetType}.${param}`;
+    const allowed = VALID_CONNECTIONS[sourceType];
+    return allowed !== undefined && allowed.includes(typeTarget);
   }
 
   connect(sourceId, targetId) {
@@ -62,6 +58,17 @@ export class ModPatchBay {
     }
   }
 
+  /** Disconnect all connections involving the given instance ID (as source or target module). */
+  disconnectAll(instanceId) {
+    for (const key of [...this._connections]) {
+      const [source, target] = key.split('->');
+      const [targetInstanceId] = splitModTarget(target);
+      if (source === instanceId || targetInstanceId === instanceId) {
+        this.disconnect(source, target);
+      }
+    }
+  }
+
   isConnected(sourceId, targetId) {
     return this._connections.has(this._key(sourceId, targetId));
   }
@@ -82,16 +89,26 @@ export class ModPatchBay {
   }
 
   _wire(sourceId, targetId) {
-    const param = this._paramGetters[targetId]();
-    if (param) {
-      this._sources[sourceId].connect(param);
+    const source = this._registry.get(sourceId);
+    if (!source?.modOutputNode) return;
+    const [targetInstanceId, param] = splitModTarget(targetId);
+    const target = this._registry.get(targetInstanceId);
+    if (!target) return;
+    const audioParam = target.getModParam(param);
+    if (audioParam) {
+      source.modOutputNode.connect(audioParam);
     }
   }
 
   _unwire(sourceId, targetId) {
-    const param = this._paramGetters[targetId]();
-    if (param) {
-      this._sources[sourceId].disconnect(param);
+    const source = this._registry.get(sourceId);
+    if (!source?.modOutputNode) return;
+    const [targetInstanceId, param] = splitModTarget(targetId);
+    const target = this._registry.get(targetInstanceId);
+    if (!target) return;
+    const audioParam = target.getModParam(param);
+    if (audioParam) {
+      source.modOutputNode.disconnect(audioParam);
     }
   }
 }

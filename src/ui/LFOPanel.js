@@ -1,10 +1,22 @@
 import { BasePanel } from './BasePanel.js';
 
 export class LFOPanel extends BasePanel {
-  constructor(lfoModule) {
-    super(lfoModule);
-    this.bindSlider('lfo-rate', 'rate', v => `${v.toFixed(1)} Hz`);
-    this.bindSlider('lfo-depth', 'depth', v => `${v}`);
-    this.bindSelect('lfo-type', 'type');
+  constructor(lfoModule, container, instanceId) {
+    super(lfoModule, container, instanceId);
+    this.setTitle('LFO');
+    this.createSelect('Waveform', 'type', [
+      { value: 'sine', label: 'Sine' },
+      { value: 'square', label: 'Square' },
+      { value: 'sawtooth', label: 'Sawtooth' },
+      { value: 'triangle', label: 'Triangle' },
+    ]);
+    this.createSlider('Rate', 'rate', {
+      min: 0.1, max: 30, value: 5, step: 0.1,
+      format: v => `${v.toFixed(1)} Hz`,
+    });
+    this.createSlider('Depth', 'depth', {
+      min: 0, max: 500, value: 100, step: 1,
+      format: v => `${v}`,
+    });
   }
 }

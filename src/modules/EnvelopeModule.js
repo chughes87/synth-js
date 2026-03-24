@@ -19,6 +19,10 @@ export class EnvelopeModule extends BaseModule {
     this.releaseTime = 0.3;
   }
 
+  get modOutputNode() {
+    return this._outputNode;
+  }
+
   get running() {
     return this._source !== null;
   }
