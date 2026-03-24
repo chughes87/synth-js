@@ -1,17 +1,17 @@
 import { BaseModule } from './BaseModule.js';
 
 /**
- * EnvelopeModule applies an ADSR envelope to a GainNode.
- * Signal passes through: inputNode → gain (envelope) → outputNode
+ * EnvelopeModule generates an ADSR control signal for modulating AudioParams.
+ * Uses ConstantSourceNode(1) → GainNode with ADSR scheduled on the gain.
+ * The GainNode output (_outputNode) connects to target AudioParams (e.g. VCA gain).
  * Call trigger() on note-on and release() on note-off.
  */
 export class EnvelopeModule extends BaseModule {
   constructor(audioContext) {
     super(audioContext);
-    this._gain = audioContext.createGain();
-    this._gain.gain.value = 0;
-    this.inputNode = this._gain;
-    this.outputNode = this._gain;
+    this._source = null;
+    this._outputNode = audioContext.createGain();
+    this._outputNode.gain.value = 0;
 
     this.attack = 0.01;
     this.decay = 0.1;
@@ -19,9 +19,28 @@ export class EnvelopeModule extends BaseModule {
     this.releaseTime = 0.3;
   }
 
+  get running() {
+    return this._source !== null;
+  }
+
+  start() {
+    if (this._source) return;
+    this._source = this.context.createConstantSource();
+    this._source.offset.value = 1;
+    this._source.connect(this._outputNode);
+    this._source.start();
+  }
+
+  stop() {
+    if (!this._source) return;
+    this._source.stop();
+    this._source.disconnect();
+    this._source = null;
+  }
+
   trigger() {
     const now = this.context.currentTime;
-    const gain = this._gain.gain;
+    const gain = this._outputNode.gain;
 
     gain.cancelScheduledValues(now);
     gain.setValueAtTime(0, now);
@@ -31,7 +50,7 @@ export class EnvelopeModule extends BaseModule {
 
   release() {
     const now = this.context.currentTime;
-    const gain = this._gain.gain;
+    const gain = this._outputNode.gain;
 
     gain.cancelScheduledValues(now);
     gain.setValueAtTime(gain.value, now);

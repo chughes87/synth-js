@@ -11,6 +11,7 @@ export class Rack {
     this.noise = modules.noise;
     this.envelope = modules.envelope;
     this.filter = modules.filter;
+    this.vca = modules.vca;
     this.delay = modules.delay;
     this.lfo = modules.lfo;
     this.output = modules.output;
@@ -32,35 +33,34 @@ export class Rack {
     this.sequencer.onStep = (i, step) => {
       const freq = NOTE_FREQS[step.note] ?? 261.63;
       this.osc.frequency = freq;
-      if (this._isEnvelopeInPath()) {
+      if (this._isEnvelopePatched()) {
         this.envelope.trigger();
       }
     };
   }
 
-  _isEnvelopeInPath() {
-    return this.patchBay.getConnections().some(c => c.target === 'envelope');
+  _isEnvelopePatched() {
+    return this.patchBay.getConnections().some(c => c.source === 'envelope');
   }
 
-  _hasModConnections() {
-    return this.patchBay.getConnections().some(c =>
-      c.source === 'lfo' && ['osc.freq', 'filter.freq', 'filter.q'].includes(c.target)
-    );
+  _hasModConnections(sourceId) {
+    return this.patchBay.getConnections().some(c => c.source === sourceId);
   }
 
   async start() {
     await this.engine.start();
     this.osc.start();
-    if (this.patchBay.getConnections().some(c => c.source === 'noise')) {
+    if (this._hasModConnections('noise')) {
       this.noise.start();
     }
-    if (this._hasModConnections()) {
+    if (this._hasModConnections('lfo')) {
       this.lfo.start();
-      this.patchBay.reconnectModulations();
     }
-    if (this._isEnvelopeInPath()) {
+    if (this._isEnvelopePatched()) {
+      this.envelope.start();
       this.envelope.trigger();
     }
+    this.patchBay.reconnectModulations();
     if (this.visualizer) this.visualizer.start();
     this.startBtn.disabled = true;
     this.stopBtn.disabled = false;
@@ -71,9 +71,10 @@ export class Rack {
     this.noise.stop();
     this.lfo.stop();
     this.sequencer.stop();
-    if (this._isEnvelopeInPath()) {
+    if (this._isEnvelopePatched()) {
       this.envelope.release();
     }
+    this.envelope.stop();
     if (this.visualizer) this.visualizer.stop();
     this.startBtn.disabled = false;
     this.stopBtn.disabled = true;
@@ -86,10 +87,13 @@ export class Rack {
     if (!this.osc.running) {
       this.osc.start();
     }
-    if (this._hasModConnections()) {
-      if (!this.lfo.running) this.lfo.start();
-      this.patchBay.reconnectModulations();
+    if (this._hasModConnections('lfo') && !this.lfo.running) {
+      this.lfo.start();
     }
+    if (this._isEnvelopePatched() && !this.envelope.running) {
+      this.envelope.start();
+    }
+    this.patchBay.reconnectModulations();
     this.sequencer.start();
     if (this.visualizer) this.visualizer.start();
     this.startBtn.disabled = true;

@@ -4,19 +4,21 @@ const ROWS = [
   { id: 'osc', label: 'Osc' },
   { id: 'noise', label: 'Noise' },
   { id: 'filter', label: 'Filter' },
-  { id: 'envelope', label: 'Env' },
+  { id: 'vca', label: 'VCA' },
   { id: 'delay', label: 'Delay' },
   { id: 'lfo', label: 'LFO' },
+  { id: 'envelope', label: 'Env' },
 ];
 
 const COLUMNS = [
   { id: 'filter', label: 'Filter' },
-  { id: 'envelope', label: 'Env' },
+  { id: 'vca', label: 'VCA' },
   { id: 'delay', label: 'Delay' },
   { id: 'output', label: 'Out' },
   { id: 'osc.freq', label: 'Osc Hz' },
   { id: 'filter.freq', label: 'Flt Hz' },
   { id: 'filter.q', label: 'Flt Q' },
+  { id: 'vca.gain', label: 'VCA Gn' },
 ];
 
 /**
