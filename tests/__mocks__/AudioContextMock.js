@@ -29,13 +29,24 @@ export class AudioParamMock {
 }
 
 export class AudioNodeMock {
+  constructor() {
+    this._connections = [];
+  }
+
   connect(destination) {
+    this._connections.push(destination);
     this._connected = destination;
     return destination;
   }
 
-  disconnect() {
-    this._connected = null;
+  disconnect(destination) {
+    if (destination === undefined) {
+      this._connections = [];
+      this._connected = null;
+    } else {
+      this._connections = this._connections.filter(c => c !== destination);
+      this._connected = this._connections[this._connections.length - 1] ?? null;
+    }
   }
 }
 

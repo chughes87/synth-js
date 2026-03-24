@@ -79,6 +79,15 @@ Goal: expand the synth with filter, delay, noise generator, LFO, and ADSR envelo
 - [ ] **19. Active step highlight** — animate current sequencer step during playback
 - [ ] **20. Cable/patch visualization** — show signal flow between modules
 
+## Phase 5: Modular patching
+
+### Sub-tasks
+
+- [x] **21. PatchBay class + tests** — routing engine with audio and modulation connections, validity matrix
+- [x] **22. PatchMatrixPanel UI** — grid table to toggle connections, calls PatchBay methods
+- [x] **23. Integrate PatchBay into main.js + Rack.js** — replace hardcoded chain and checkboxes
+- [ ] **24. Sequencer target dropdown** — routable sequencer
+
 ### Verification (end state)
 
 1. `npm test` — all Jest tests pass
