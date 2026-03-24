@@ -143,9 +143,9 @@ const PRESETS = {
   },
   // Two sequencers at different tempos hitting different oscillators
   polyrhythm: {
-    modules: ['trigger', 'clock', 'clock', 'seq', 'seq', 'osc', 'osc', 'filter', 'vca', 'output', 'envelope', 'envelope'],
-    signal: [[5, 7], [6, 7], [7, 8], [8, 9]],
-    mod: [[0, '1.start'], [0, '2.start'], [0, '3.start'], [0, '4.start'], [1, '3.clock'], [2, '4.clock'], [3, '5.freq'], [4, '6.freq'], [3, '10.trigger'], [4, '11.trigger'], [10, '8.gain'], [11, '8.gain']],
+    modules: ['trigger', 'clock', 'clock', 'seq', 'seq', 'osc', 'osc', 'vca', 'vca', 'filter', 'output', 'envelope', 'envelope'],
+    signal: [[5, 7], [6, 8], [7, 9], [8, 9], [9, 10]],
+    mod: [[0, '1.start'], [0, '2.start'], [0, '3.start'], [0, '4.start'], [1, '3.clock'], [2, '4.clock'], [3, '5.freq'], [4, '6.freq'], [3, '11.trigger'], [4, '12.trigger'], [11, '7.gain'], [12, '8.gain']],
   },
   // Osc + noise through filter with slow LFO sweep + delay feedback
   'drone-wash': {
