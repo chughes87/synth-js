@@ -5,6 +5,7 @@ import { FilterModule } from '../../src/modules/FilterModule.js';
 import { EnvelopeModule } from '../../src/modules/EnvelopeModule.js';
 import { DelayModule } from '../../src/modules/DelayModule.js';
 import { LFOModule } from '../../src/modules/LFOModule.js';
+import { VCAModule } from '../../src/modules/VCAModule.js';
 import { OutputModule } from '../../src/modules/OutputModule.js';
 import { AudioContextMock } from '../__mocks__/AudioContextMock.js';
 
@@ -16,6 +17,7 @@ function createModules() {
     noise: new NoiseModule(ctx),
     filter: new FilterModule(ctx),
     envelope: new EnvelopeModule(ctx),
+    vca: new VCAModule(ctx),
     delay: new DelayModule(ctx),
     lfo: new LFOModule(ctx),
     output: new OutputModule(ctx),
@@ -30,13 +32,13 @@ describe('PatchBay', () => {
     patchBay = new PatchBay(modules);
   });
 
-  describe('connect / disconnect', () => {
-    test('audio connect wires outputNode to inputNode', () => {
+  describe('audio connect / disconnect', () => {
+    test('connect wires outputNode to inputNode', () => {
       patchBay.connect('osc', 'filter');
       expect(modules.osc.outputNode._connections).toContain(modules.filter.inputNode);
     });
 
-    test('audio disconnect removes specific connection', () => {
+    test('disconnect removes specific connection', () => {
       patchBay.connect('osc', 'filter');
       patchBay.disconnect('osc', 'filter');
       expect(modules.osc.outputNode._connections).not.toContain(modules.filter.inputNode);
@@ -50,10 +52,9 @@ describe('PatchBay', () => {
       expect(patchBay.connect('osc', 'filter')).toBe(true);
     });
 
-    test('connect returns true if already connected (idempotent)', () => {
+    test('connect is idempotent', () => {
       patchBay.connect('osc', 'filter');
       expect(patchBay.connect('osc', 'filter')).toBe(true);
-      // Should not duplicate the Web Audio connection
       const count = modules.osc.outputNode._connections
         .filter(c => c === modules.filter.inputNode).length;
       expect(count).toBe(1);
@@ -81,13 +82,30 @@ describe('PatchBay', () => {
     });
   });
 
+  describe('VCA audio routing', () => {
+    test('osc can connect to vca', () => {
+      patchBay.connect('osc', 'vca');
+      expect(modules.osc.outputNode._connections).toContain(modules.vca.inputNode);
+    });
+
+    test('vca can connect to output', () => {
+      patchBay.connect('vca', 'output');
+      expect(modules.vca.outputNode._connections).toContain(modules.output.inputNode);
+    });
+
+    test('filter can connect to vca', () => {
+      patchBay.connect('filter', 'vca');
+      expect(patchBay.isConnected('filter', 'vca')).toBe(true);
+    });
+  });
+
   describe('toggle', () => {
-    test('toggle connects and returns true when not connected', () => {
+    test('connects and returns true when not connected', () => {
       expect(patchBay.toggle('osc', 'filter')).toBe(true);
       expect(patchBay.isConnected('osc', 'filter')).toBe(true);
     });
 
-    test('toggle disconnects and returns false when already connected', () => {
+    test('disconnects and returns false when already connected', () => {
       patchBay.connect('osc', 'filter');
       expect(patchBay.toggle('osc', 'filter')).toBe(false);
       expect(patchBay.isConnected('osc', 'filter')).toBe(false);
@@ -126,7 +144,7 @@ describe('PatchBay', () => {
     });
   });
 
-  describe('modulation connections', () => {
+  describe('LFO modulation connections', () => {
     test('lfo connects to filter.freq AudioParam', () => {
       patchBay.connect('lfo', 'filter.freq');
       expect(modules.lfo._depthNode._connections)
@@ -146,18 +164,58 @@ describe('PatchBay', () => {
         .toContain(modules.filter._filter.Q);
     });
 
+    test('lfo connects to vca.gain AudioParam', () => {
+      patchBay.connect('lfo', 'vca.gain');
+      expect(modules.lfo._depthNode._connections)
+        .toContain(modules.vca._gain.gain);
+    });
+
     test('lfo to osc.freq skips wire when oscillator not started', () => {
       patchBay.connect('lfo', 'osc.freq');
-      // Connection is tracked but no Web Audio wire (osc._oscillator is null)
       expect(patchBay.isConnected('lfo', 'osc.freq')).toBe(true);
       expect(modules.lfo._depthNode._connections).toHaveLength(0);
     });
 
     test('reconnectModulations wires lfo to osc.freq after start', () => {
       patchBay.connect('lfo', 'osc.freq');
-      modules.osc.start(); // creates _oscillator
+      modules.osc.start();
       patchBay.reconnectModulations();
       expect(modules.lfo._depthNode._connections)
+        .toContain(modules.osc._oscillator.frequency);
+    });
+  });
+
+  describe('envelope modulation connections', () => {
+    test('envelope connects to vca.gain AudioParam', () => {
+      patchBay.connect('envelope', 'vca.gain');
+      expect(modules.envelope._outputNode._connections)
+        .toContain(modules.vca._gain.gain);
+    });
+
+    test('envelope connects to filter.freq AudioParam', () => {
+      patchBay.connect('envelope', 'filter.freq');
+      expect(modules.envelope._outputNode._connections)
+        .toContain(modules.filter._filter.frequency);
+    });
+
+    test('envelope disconnects from vca.gain', () => {
+      patchBay.connect('envelope', 'vca.gain');
+      patchBay.disconnect('envelope', 'vca.gain');
+      expect(modules.envelope._outputNode._connections)
+        .not.toContain(modules.vca._gain.gain);
+    });
+
+    test('envelope to osc.freq skips wire when oscillator not started', () => {
+      patchBay.connect('envelope', 'osc.freq');
+      expect(patchBay.isConnected('envelope', 'osc.freq')).toBe(true);
+      expect(modules.envelope._outputNode._connections).toHaveLength(0);
+    });
+
+    test('reconnectModulations wires envelope to osc.freq after start', () => {
+      patchBay.connect('envelope', 'osc.freq');
+      modules.osc.start();
+      patchBay.reconnectModulations();
+      expect(modules.envelope._outputNode._connections)
         .toContain(modules.osc._oscillator.frequency);
     });
   });
@@ -175,10 +233,14 @@ describe('PatchBay', () => {
       expect(patchBay.connect('lfo', 'filter')).toBe(false);
     });
 
+    test('rejects envelope to audio target', () => {
+      expect(patchBay.connect('envelope', 'filter')).toBe(false);
+    });
+
     test('rejects downstream to upstream (feedback)', () => {
       expect(patchBay.connect('output', 'filter')).toBe(false);
       expect(patchBay.connect('delay', 'filter')).toBe(false);
-      expect(patchBay.connect('envelope', 'filter')).toBe(false);
+      expect(patchBay.connect('vca', 'filter')).toBe(false);
     });
 
     test('all VALID_CONNECTIONS entries are accepted', () => {

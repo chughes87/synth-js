@@ -126,6 +126,23 @@ export class AudioBufferSourceNodeMock extends AudioNodeMock {
   }
 }
 
+export class ConstantSourceNodeMock extends AudioNodeMock {
+  constructor() {
+    super();
+    this.offset = new AudioParamMock(1);
+    this.started = false;
+    this.stopped = false;
+  }
+
+  start() {
+    this.started = true;
+  }
+
+  stop() {
+    this.stopped = true;
+  }
+}
+
 export class AudioContextMock {
   constructor() {
     this.state = 'suspended';
@@ -156,6 +173,10 @@ export class AudioContextMock {
 
   createBufferSource() {
     return new AudioBufferSourceNodeMock();
+  }
+
+  createConstantSource() {
+    return new ConstantSourceNodeMock();
   }
 
   async resume() {

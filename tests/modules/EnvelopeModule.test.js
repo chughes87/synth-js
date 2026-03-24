@@ -10,8 +10,8 @@ describe('EnvelopeModule', () => {
     env = new EnvelopeModule(ctx);
   });
 
-  test('gain starts at 0 (silent)', () => {
-    expect(env._gain.gain.value).toBe(0);
+  test('output gain starts at 0 (silent)', () => {
+    expect(env._outputNode.gain.value).toBe(0);
   });
 
   test('has default ADSR values', () => {
@@ -21,13 +21,38 @@ describe('EnvelopeModule', () => {
     expect(env.releaseTime).toBe(0.3);
   });
 
-  test('inputNode and outputNode are the same GainNode', () => {
-    expect(env.inputNode).toBe(env.outputNode);
+  test('is not running initially', () => {
+    expect(env.running).toBe(false);
+  });
+
+  test('start() creates ConstantSourceNode and connects to output', () => {
+    env.start();
+    expect(env.running).toBe(true);
+    expect(env._source.started).toBe(true);
+    expect(env._source._connections).toContain(env._outputNode);
+  });
+
+  test('start() is idempotent', () => {
+    env.start();
+    const source = env._source;
+    env.start();
+    expect(env._source).toBe(source);
+  });
+
+  test('stop() tears down source', () => {
+    env.start();
+    env.stop();
+    expect(env.running).toBe(false);
+    expect(env._source).toBeNull();
+  });
+
+  test('stop() is safe when not running', () => {
+    expect(() => env.stop()).not.toThrow();
   });
 
   test('trigger() schedules attack and decay ramps', () => {
     env.trigger();
-    const scheduled = env._gain.gain._scheduled;
+    const scheduled = env._outputNode.gain._scheduled;
     expect(scheduled.length).toBe(3);
     expect(scheduled[0].type).toBe('setValueAtTime');
     expect(scheduled[0].value).toBe(0);
@@ -39,9 +64,9 @@ describe('EnvelopeModule', () => {
 
   test('release() schedules ramp to 0', () => {
     env.trigger();
-    env._gain.gain._scheduled = [];
+    env._outputNode.gain._scheduled = [];
     env.release();
-    const scheduled = env._gain.gain._scheduled;
+    const scheduled = env._outputNode.gain._scheduled;
     expect(scheduled.length).toBe(2);
     expect(scheduled[0].type).toBe('setValueAtTime');
     expect(scheduled[1].type).toBe('linearRamp');
@@ -55,23 +80,15 @@ describe('EnvelopeModule', () => {
     env.releaseTime = 0.8;
 
     env.trigger();
-    const scheduled = env._gain.gain._scheduled;
-    // Attack ramp should target time = attack
+    const scheduled = env._outputNode.gain._scheduled;
     expect(scheduled[1].time).toBe(0.05);
-    // Decay ramp should target time = attack + decay
     expect(scheduled[2].time).toBeCloseTo(0.25);
     expect(scheduled[2].value).toBe(0.5);
   });
 
-  test('connect() wires outputNode to a target', () => {
-    const target = ctx.createGain();
-    env.connect(target);
-    expect(env.outputNode._connected).toBe(target);
-  });
-
-  test('connect() uses inputNode if target has one', () => {
-    const inputNode = ctx.createGain();
-    env.connect({ inputNode });
-    expect(env.outputNode._connected).toBe(inputNode);
+  test('_outputNode can connect to an AudioParam for modulation', () => {
+    const param = ctx.createGain().gain;
+    env._outputNode.connect(param);
+    expect(env._outputNode._connections).toContain(param);
   });
 });

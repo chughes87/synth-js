@@ -4,12 +4,13 @@
  */
 
 const VALID_CONNECTIONS = {
-  osc:      ['filter', 'envelope', 'delay', 'output'],
-  noise:    ['filter', 'envelope', 'delay', 'output'],
-  filter:   ['envelope', 'delay', 'output'],
-  envelope: ['delay', 'output'],
+  osc:      ['filter', 'vca', 'delay', 'output'],
+  noise:    ['filter', 'vca', 'delay', 'output'],
+  filter:   ['vca', 'delay', 'output'],
+  vca:      ['delay', 'output'],
   delay:    ['output'],
-  lfo:      ['osc.freq', 'filter.freq', 'filter.q'],
+  lfo:      ['osc.freq', 'filter.freq', 'filter.q', 'vca.gain'],
+  envelope: ['osc.freq', 'filter.freq', 'filter.q', 'vca.gain'],
 };
 
 export class PatchBay {
@@ -21,23 +22,27 @@ export class PatchBay {
       osc: modules.osc,
       noise: modules.noise,
       filter: modules.filter,
-      envelope: modules.envelope,
+      vca: modules.vca,
       delay: modules.delay,
     };
 
     this._audioTargets = {
       filter: modules.filter,
-      envelope: modules.envelope,
+      vca: modules.vca,
       delay: modules.delay,
       output: modules.output,
     };
 
-    this._modSource = modules.lfo;
+    this._modSources = {
+      lfo: modules.lfo._depthNode,
+      envelope: modules.envelope._outputNode,
+    };
 
     this._modParamGetters = {
       'osc.freq': () => modules.osc._oscillator?.frequency,
       'filter.freq': () => modules.filter._filter.frequency,
       'filter.q': () => modules.filter._filter.Q,
+      'vca.gain': () => modules.vca._gain.gain,
     };
   }
 
@@ -52,6 +57,10 @@ export class PatchBay {
 
   _isMod(targetId) {
     return targetId in this._modParamGetters;
+  }
+
+  _isModSource(sourceId) {
+    return sourceId in this._modSources;
   }
 
   connect(sourceId, targetId) {
@@ -107,7 +116,7 @@ export class PatchBay {
     if (this._isMod(targetId)) {
       const param = this._modParamGetters[targetId]();
       if (param) {
-        this._modSource._depthNode.connect(param);
+        this._modSources[sourceId].connect(param);
       }
     } else {
       const source = this._audioSources[sourceId];
@@ -120,7 +129,7 @@ export class PatchBay {
     if (this._isMod(targetId)) {
       const param = this._modParamGetters[targetId]();
       if (param) {
-        this._modSource._depthNode.disconnect(param);
+        this._modSources[sourceId].disconnect(param);
       }
     } else {
       const source = this._audioSources[sourceId];
