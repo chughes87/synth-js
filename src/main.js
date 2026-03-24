@@ -49,11 +49,7 @@ const modules = { osc: oscillator, noise, filter, vca, envelope, delay, lfo, out
 const signalPatchBay = new SignalPatchBay(modules);
 const modPatchBay = new ModPatchBay(modules);
 
-// Default signal chain: osc → filter → vca → output, envelope → vca.gain
-signalPatchBay.connect('osc', 'filter');
-signalPatchBay.connect('filter', 'vca');
-signalPatchBay.connect('vca', 'output');
-modPatchBay.connect('envelope', 'vca.gain');
+// No default connections — user patches everything via the matrix grids
 
 // UI panels
 new OscillatorPanel(oscillator);
