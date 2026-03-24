@@ -21,8 +21,8 @@ Goal: a working browser synth where you can hear an oscillator through your spea
 - [x] **3. OscillatorModule** — `src/modules/OscillatorModule.js` + `tests/modules/OscillatorModule.test.js`
 - [x] **4. OutputModule** — `src/modules/OutputModule.js` + `tests/modules/OutputModule.test.js`
 - [x] **5. HTML shell + CSS** — `index.html`, `src/style.css` (dark rack layout)
-- [ ] **6. UI panels + Rack** — `src/ui/Rack.js`, `src/ui/OscillatorPanel.js`, `src/ui/OutputPanel.js`
-- [ ] **7. Wire it together** — `src/main.js` instantiates engine, modules, rack, connects osc → output
+- [x] **6. UI panels + Rack** — `src/ui/Rack.js`, `src/ui/OscillatorPanel.js`, `src/ui/OutputPanel.js`
+- [x] **7. Wire it together** — `src/main.js` instantiates engine, modules, rack, connects osc → output
 
 Each sub-task is its own PR. Start with sub-task 1.
 
