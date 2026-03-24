@@ -64,6 +64,11 @@ Goal: expand the synth with filter, delay, noise generator, LFO, and ADSR envelo
 - [x] **12. EnvelopeModule** — ADSR envelope applied to a GainNode
 - [x] **13. UI + wiring for new modules** — panels, HTML, CSS, main.js updates
 
+## Phase 3: Sequencer
+
+- [x] **14. SequencerModule** — 16-step sequencer with note selection, BPM control, lookahead scheduling
+- [x] **15. SequencerPanel + wiring** — step grid UI, Seq Play/Stop transport, integration with oscillator + envelope
+
 ### Verification (end state)
 
 1. `npm test` — all Jest tests pass
