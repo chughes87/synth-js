@@ -44,6 +44,14 @@ export class Rack {
           target.trigger();
         } else if (param === 'freq' && 'frequency' in target) {
           target.frequency = freq;
+        } else if (param === 'start') {
+          if (target.running && typeof target.stop === 'function') {
+            target.stop();
+          } else if (typeof target.start === 'function') {
+            target.start();
+          }
+        } else if (param === 'clock' && typeof target.tick === 'function') {
+          target.tick();
         }
       }
     };
@@ -96,6 +104,12 @@ export class Rack {
           target.tick();
         } else if (param === 'trigger' && typeof target.trigger === 'function') {
           target.trigger();
+        } else if (param === 'start') {
+          if (target.running && typeof target.stop === 'function') {
+            target.stop();
+          } else if (typeof target.start === 'function') {
+            target.start();
+          }
         }
       }
     };
