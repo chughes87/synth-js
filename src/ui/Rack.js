@@ -1,66 +1,79 @@
+import { typeOf, splitModTarget } from '../engine/ModuleRegistry.js';
 import { NOTE_FREQS } from '../modules/SequencerModule.js';
-import { typeOf } from '../engine/ModuleRegistry.js';
 
 /**
  * Rack wires transport controls to the engine and modules.
  * Uses the registry to iterate active module instances for start/stop.
  */
 export class Rack {
-  constructor(engine, registry, activeModules, signalPatchBay, modPatchBay, sequencer, visualizer) {
+  constructor(engine, registry, activeModules, signalPatchBay, modPatchBay, visualizer) {
     this.engine = engine;
     this._registry = registry;
     this._activeModules = activeModules;
     this.signalPatchBay = signalPatchBay;
     this.modPatchBay = modPatchBay;
-    this.sequencer = sequencer;
     this.visualizer = visualizer;
 
     this.startBtn = document.getElementById('start-btn');
     this.stopBtn = document.getElementById('stop-btn');
-    this.seqPlayBtn = document.getElementById('seq-play-btn');
-    this.seqStopBtn = document.getElementById('seq-stop-btn');
 
     this._running = false;
 
     this.startBtn.addEventListener('click', () => this.start());
     this.stopBtn.addEventListener('click', () => this.stop());
-    this.seqPlayBtn.addEventListener('click', () => this.seqPlay());
-    this.seqStopBtn.addEventListener('click', () => this.seqStop());
+  }
 
-    // Wire sequencer step callback
-    this.sequencer.onStep = (i, step) => {
+  /**
+   * Wire a sequencer instance's onStep to trigger connected envelopes.
+   * Called from main.js when a sequencer is added.
+   */
+  wireSequencer(seqId) {
+    const seq = this._registry.get(seqId);
+    if (!seq) return;
+
+    seq.onStep = (_i, step) => {
       const freq = NOTE_FREQS[step.note] ?? 261.63;
-      // Set frequency on all active oscillators
-      for (const id of this._activeModules) {
-        if (typeOf(id) === 'osc') {
-          const m = this._registry.get(id);
-          if (m) m.frequency = freq;
+
+      for (const conn of this.modPatchBay.getConnections()) {
+        if (conn.source !== seqId) continue;
+        const [targetId, param] = splitModTarget(conn.target);
+        const target = this._registry.get(targetId);
+        if (!target) continue;
+
+        if (param === 'trigger' && typeof target.trigger === 'function') {
+          target.trigger();
+        } else if (param === 'freq' && 'frequency' in target) {
+          target.frequency = freq;
         }
-      }
-      if (this._hasActiveModType('envelope')) {
-        this._forActiveType('envelope', m => m.trigger());
       }
     };
   }
 
-  _hasActiveModType(type) {
-    for (const id of this._activeModules) {
-      if (typeOf(id) === type) return true;
-    }
-    return false;
-  }
+  /**
+   * Wire a trigger module's onFire to start/trigger connected targets.
+   */
+  wireTrigger(trigId) {
+    const trig = this._registry.get(trigId);
+    if (!trig) return;
 
-  _forActiveType(type, fn) {
-    for (const id of this._activeModules) {
-      if (typeOf(id) === type) {
-        const m = this._registry.get(id);
-        if (m) fn(m, id);
+    trig.onFire = () => {
+      for (const conn of this.modPatchBay.getConnections()) {
+        if (conn.source !== trigId) continue;
+        const [targetId, param] = splitModTarget(conn.target);
+        const target = this._registry.get(targetId);
+        if (!target) continue;
+
+        if (param === 'trigger' && typeof target.trigger === 'function') {
+          target.trigger();
+        } else if (param === 'start') {
+          if (target.running && typeof target.stop === 'function') {
+            target.stop();
+          } else if (typeof target.start === 'function') {
+            target.start();
+          }
+        }
       }
-    }
-  }
-
-  _isEnvelopePatched() {
-    return this.modPatchBay.getConnections().some(c => typeOf(c.source) === 'envelope');
+    };
   }
 
   _hasSignalConnections(instanceId) {
@@ -89,6 +102,7 @@ export class Rack {
         m.start();
         m.trigger();
       }
+      // Sequencers are started/stopped via their own panel Play/Stop buttons
     }
 
     this.modPatchBay.reconnectModulations();
@@ -111,7 +125,6 @@ export class Rack {
     if (type === 'osc' && typeof m.start === 'function') {
       m.start();
     }
-    // LFO/envelope/noise will be started when they get connections via onPatchChange
   }
 
   /** Called when a connection is toggled while running — starts modules that now need it. */
@@ -145,44 +158,9 @@ export class Rack {
       m.stop();
     }
 
-    this.sequencer.stop();
     if (this.visualizer) this.visualizer.stop();
     this._running = false;
     this.startBtn.disabled = false;
     this.stopBtn.disabled = true;
-    this.seqPlayBtn.disabled = false;
-    this.seqStopBtn.disabled = true;
-  }
-
-  async seqPlay() {
-    await this.engine.start();
-
-    for (const id of this._activeModules) {
-      const m = this._registry.get(id);
-      if (!m) continue;
-      const type = typeOf(id);
-
-      if (type === 'osc' && !m.running) {
-        m.start();
-      } else if (type === 'lfo' && this._hasModConnections(id) && !m.running) {
-        m.start();
-      } else if (type === 'envelope' && this._hasModConnections(id) && !m.running) {
-        m.start();
-      }
-    }
-
-    this.modPatchBay.reconnectModulations();
-    this.sequencer.start();
-    if (this.visualizer) this.visualizer.start();
-    this.startBtn.disabled = true;
-    this.stopBtn.disabled = false;
-    this.seqPlayBtn.disabled = true;
-    this.seqStopBtn.disabled = false;
-  }
-
-  seqStop() {
-    this.sequencer.stop();
-    this.seqPlayBtn.disabled = false;
-    this.seqStopBtn.disabled = true;
   }
 }

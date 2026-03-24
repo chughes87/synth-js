@@ -6,6 +6,8 @@ import { DelayModule } from '../modules/DelayModule.js';
 import { OutputModule } from '../modules/OutputModule.js';
 import { LFOModule } from '../modules/LFOModule.js';
 import { EnvelopeModule } from '../modules/EnvelopeModule.js';
+import { SequencerModule } from '../modules/SequencerModule.js';
+import { TriggerModule } from '../modules/TriggerModule.js';
 
 export const MODULE_TYPES = {
   osc:      { ModuleClass: OscillatorModule, label: 'Oscillator' },
@@ -16,6 +18,8 @@ export const MODULE_TYPES = {
   output:   { ModuleClass: OutputModule, label: 'Output' },
   lfo:      { ModuleClass: LFOModule, label: 'LFO' },
   envelope: { ModuleClass: EnvelopeModule, label: 'Envelope' },
+  seq:      { ModuleClass: SequencerModule, label: 'Sequencer' },
+  trigger:  { ModuleClass: TriggerModule, label: 'Trigger' },
 };
 
 /** Extract module type from an instance ID (e.g. 'osc-1' → 'osc', 'filter-2' → 'filter'). */

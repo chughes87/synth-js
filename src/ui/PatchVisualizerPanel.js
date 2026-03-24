@@ -24,7 +24,7 @@ const TYPE_COLUMN = {
   filter: 'process',
   vca: 'amp', delay: 'amp',
   output: 'output',
-  lfo: 'mod', envelope: 'mod',
+  lfo: 'mod', envelope: 'mod', seq: 'mod', trigger: 'mod',
 };
 
 const SIGNAL_COLOR = '#e94560';
@@ -37,7 +37,7 @@ const BG_COLOR = '#0a0a1a';
 function shortLabel(instanceId) {
   const type = typeOf(instanceId);
   const num = instanceId.slice(type.length + 1);
-  const SHORT = { osc: 'OSC', noise: 'NSE', filter: 'FLT', vca: 'VCA', delay: 'DLY', output: 'OUT', lfo: 'LFO', envelope: 'ENV' };
+  const SHORT = { osc: 'OSC', noise: 'NSE', filter: 'FLT', vca: 'VCA', delay: 'DLY', output: 'OUT', lfo: 'LFO', envelope: 'ENV', seq: 'SEQ', trigger: 'TRG' };
   return `${SHORT[type] ?? type} ${num}`;
 }
 
@@ -60,59 +60,76 @@ export class PatchVisualizerPanel {
   _resizeCanvas() {
     const rect = this.canvas.parentElement.getBoundingClientRect();
     this.canvas.width = rect.width - 40;
-    this.canvas.height = 200;
+    // Height is computed dynamically in refresh() based on module count
   }
 
-  _computePositions(w, h) {
+  _computeLayout() {
     const active = [...this._activeModules];
-    const MOD_TYPES = new Set(['lfo', 'envelope']);
+    const MOD_TYPES = new Set(['lfo', 'envelope', 'seq', 'trigger']);
+    const MIN_NODE_SPACING = NODE_H + 8;
 
-    // Group by column
-    const columns = {};
+    // Group into signal row and mod row columns
+    const signalCols = {};
+    const modCols = {};
     for (const id of active) {
       const type = typeOf(id);
       const col = TYPE_COLUMN[type] ?? 'source';
-      const isModRow = MOD_TYPES.has(type);
-      const key = isModRow ? `${col}_mod` : col;
-      if (!columns[key]) columns[key] = [];
-      columns[key].push(id);
-    }
-
-    // Assign x per column key, y by index within column
-    const colXMap = {
-      source: 0.08, process: 0.30, amp: 0.52, output: 0.74,
-      source_mod: 0.08, process_mod: 0.30, amp_mod: 0.52,
-      mod_mod: 0.08,
-    };
-
-    const nodes = {};
-    for (const [key, ids] of Object.entries(columns)) {
-      const fx = colXMap[key] ?? 0.5;
-      const isMod = key.endsWith('_mod');
-      const yStart = isMod ? 0.65 : 0.05;
-      const yRange = isMod ? 0.30 : 0.55;
-      const step = ids.length > 1 ? yRange / (ids.length - 1) : 0;
-
-      for (let i = 0; i < ids.length; i++) {
-        const fy = ids.length === 1 ? yStart + yRange * 0.3 : yStart + step * i;
-        nodes[ids[i]] = {
-          x: PADDING + fx * (w - 2 * PADDING - NODE_W),
-          y: PADDING + fy * (h - 2 * PADDING - NODE_H),
-        };
+      if (MOD_TYPES.has(type)) {
+        if (!modCols[col]) modCols[col] = [];
+        modCols[col].push(id);
+      } else {
+        if (!signalCols[col]) signalCols[col] = [];
+        signalCols[col].push(id);
       }
     }
-    return nodes;
+
+    // Find tallest column in each row
+    const maxSignal = Math.max(0, ...Object.values(signalCols).map(ids => ids.length));
+    const maxMod = Math.max(0, ...Object.values(modCols).map(ids => ids.length));
+
+    // Compute required height
+    const signalHeight = Math.max(0, maxSignal * MIN_NODE_SPACING);
+    const modHeight = Math.max(0, maxMod * MIN_NODE_SPACING);
+    const gap = (maxSignal > 0 && maxMod > 0) ? 20 : 0;
+    const totalHeight = PADDING * 2 + signalHeight + gap + modHeight + 20; // 20 for legend
+    const h = Math.max(100, totalHeight);
+
+    const w = this.canvas.width;
+    this.canvas.height = h;
+
+    const colXMap = { source: 0.08, process: 0.30, amp: 0.52, output: 0.74 };
+
+    const nodes = {};
+
+    // Place signal nodes
+    const signalTop = PADDING;
+    for (const [col, ids] of Object.entries(signalCols)) {
+      const fx = colXMap[col] ?? 0.5;
+      const x = PADDING + fx * (w - 2 * PADDING - NODE_W);
+      for (let i = 0; i < ids.length; i++) {
+        nodes[ids[i]] = { x, y: signalTop + i * MIN_NODE_SPACING };
+      }
+    }
+
+    // Place mod nodes below signal section
+    const modTop = signalTop + signalHeight + gap;
+    for (const [col, ids] of Object.entries(modCols)) {
+      const fx = colXMap[col] ?? 0.08;
+      const x = PADDING + fx * (w - 2 * PADDING - NODE_W);
+      for (let i = 0; i < ids.length; i++) {
+        nodes[ids[i]] = { x, y: modTop + i * MIN_NODE_SPACING };
+      }
+    }
+
+    return { nodes, w, h };
   }
 
   refresh() {
-    const { ctx, canvas } = this;
-    const w = canvas.width;
-    const h = canvas.height;
+    const { ctx } = this;
+    const { nodes, w, h } = this._computeLayout();
 
     ctx.fillStyle = BG_COLOR;
     ctx.fillRect(0, 0, w, h);
-
-    const nodes = this._computePositions(w, h);
 
     // Draw signal connections
     for (const { source, target } of this.signalPatchBay.getConnections()) {

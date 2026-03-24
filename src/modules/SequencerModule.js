@@ -1,9 +1,11 @@
 /**
- * SequencerModule — a 16-step sequencer that drives an oscillator and
- * optionally triggers an envelope on each active step.
+ * SequencerModule — a 16-step sequencer that outputs note CV and triggers.
  *
  * Uses a lookahead scheduler (setInterval + AudioContext.currentTime)
  * for tight timing without blocking the UI thread.
+ *
+ * modOutputNode is a ConstantSourceNode whose offset is set to the
+ * current step's note frequency — connect it to AudioParams via ModPatchBay.
  */
 
 const NOTE_FREQS = {
@@ -33,6 +35,8 @@ export class SequencerModule {
     this._timerId = null;
     this._onStep = null;
 
+    // No audio-rate CV output — sequencer uses direct property setting via onStep callback
+
     // Each step: { active: bool, note: string }
     this.steps = [];
     for (let i = 0; i < this.numSteps; i++) {
@@ -42,6 +46,9 @@ export class SequencerModule {
       });
     }
   }
+
+  // No modOutputNode — sequencer routes via onStep callback, not audio-rate CV.
+  // ModPatchBay stores the connection but _wire is a no-op (modOutputNode is undefined).
 
   get stepDuration() {
     return 60 / this.bpm / 4; // sixteenth notes
@@ -57,7 +64,7 @@ export class SequencerModule {
 
   /**
    * Register a callback: onStep(stepIndex, step)
-   * Called for each active step so the caller can set oscillator freq, trigger envelope, etc.
+   * Called for each active step so the Rack can trigger connected envelopes.
    */
   set onStep(fn) {
     this._onStep = fn;
@@ -79,8 +86,10 @@ export class SequencerModule {
   _schedule() {
     while (this._nextStepTime < this.context.currentTime + SCHEDULE_AHEAD) {
       const step = this.steps[this._currentStep];
-      if (step.active && this._onStep) {
-        this._onStep(this._currentStep, step);
+      if (step.active) {
+        if (this._onStep) {
+          this._onStep(this._currentStep, step);
+        }
       }
       // Notify UI of step change even for inactive steps
       if (this._onStepChange) {

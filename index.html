@@ -10,16 +10,6 @@
   <div id="rack">
     <div id="module-panels"></div>
 
-    <div class="module module-wide" id="sequencer-panel">
-      <h2>Sequencer</h2>
-      <label>
-        Tempo
-        <input type="range" id="seq-bpm" min="40" max="300" value="120" step="1">
-        <span id="seq-bpm-value">120 BPM</span>
-      </label>
-      <div id="sequencer-grid"></div>
-    </div>
-
     <div class="module module-wide" id="module-picker-panel">
       <h2>Patch Builder</h2>
       <div class="picker-row">
@@ -27,9 +17,30 @@
         <button id="module-add-btn">Add</button>
         <select id="preset-select">
           <option value="">Load Preset...</option>
-          <option value="subtractive">Subtractive</option>
-          <option value="fm">FM-ish</option>
-          <option value="noisepad">Noise Pad</option>
+          <optgroup label="Classic">
+            <option value="subtractive">Subtractive</option>
+            <option value="sequenced">Sequenced</option>
+            <option value="fm-bell">FM Bell</option>
+          </optgroup>
+          <optgroup label="Thick">
+            <option value="dual-detune">Dual Detune</option>
+            <option value="triad-drone">Triad Drone</option>
+            <option value="drone-wash">Drone Wash</option>
+          </optgroup>
+          <optgroup label="Percussive">
+            <option value="noise-perc">Noise Perc</option>
+            <option value="acid-bass">Acid Bass</option>
+            <option value="glitch-seq">Glitch Seq</option>
+          </optgroup>
+          <optgroup label="Complex">
+            <option value="cross-mod">Cross Mod</option>
+            <option value="filter-duo">Filter Duo</option>
+            <option value="polyrhythm">Polyrhythm</option>
+            <option value="dual-seq">Dual Seq</option>
+          </optgroup>
+          <optgroup label="Experimental">
+            <option value="chaos">Chaos</option>
+          </optgroup>
         </select>
       </div>
     </div>
@@ -47,6 +58,10 @@
       <h2>Mod Routing</h2>
     </div>
 
+    <div class="module module-wide" id="trig-patch-panel">
+      <h2>Trigger Routing</h2>
+    </div>
+
     <div class="module module-wide" id="visualizer-panel">
       <h2>Scope</h2>
       <canvas id="visualizer-canvas"></canvas>
@@ -56,8 +71,6 @@
   <div id="transport">
     <button id="start-btn">Start</button>
     <button id="stop-btn" disabled>Stop</button>
-    <button id="seq-play-btn">Seq Play</button>
-    <button id="seq-stop-btn" disabled>Seq Stop</button>
   </div>
 
   <script type="module" src="src/main.js"></script>
