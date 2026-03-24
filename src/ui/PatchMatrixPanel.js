@@ -20,6 +20,7 @@ const CV_PARAMS = {
 const TRIG_PARAMS = {
   envelope: [{ param: 'trigger', label: 'Trg' }],
   seq: [{ param: 'start', label: 'Start' }, { param: 'clock', label: 'Clk' }],
+  clock: [{ param: 'start', label: 'Start' }],
 };
 
 // Types that can be trigger sources
