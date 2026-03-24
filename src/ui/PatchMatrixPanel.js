@@ -19,11 +19,11 @@ const CV_PARAMS = {
 // Trigger params
 const TRIG_PARAMS = {
   envelope: [{ param: 'trigger', label: 'Trg' }],
-  seq: [{ param: 'start', label: 'Start' }],
+  seq: [{ param: 'start', label: 'Start' }, { param: 'clock', label: 'Clk' }],
 };
 
 // Types that can be trigger sources
-const TRIG_SOURCE_TYPES = new Set(['seq', 'trigger']);
+const TRIG_SOURCE_TYPES = new Set(['seq', 'trigger', 'clock']);
 
 function shortLabel(instanceId) {
   const type = typeOf(instanceId);

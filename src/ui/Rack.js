@@ -71,6 +71,31 @@ export class Rack {
           } else if (typeof target.start === 'function') {
             target.start();
           }
+        } else if (param === 'clock' && typeof target.tick === 'function') {
+          target.tick();
+        }
+      }
+    };
+  }
+
+  /**
+   * Wire a clock module's onTick to advance connected sequencers and trigger envelopes.
+   */
+  wireClock(clockId) {
+    const clock = this._registry.get(clockId);
+    if (!clock) return;
+
+    clock.onTick = () => {
+      for (const conn of this.modPatchBay.getConnections()) {
+        if (conn.source !== clockId) continue;
+        const [targetId, param] = splitModTarget(conn.target);
+        const target = this._registry.get(targetId);
+        if (!target) continue;
+
+        if (param === 'clock' && typeof target.tick === 'function') {
+          target.tick();
+        } else if (param === 'trigger' && typeof target.trigger === 'function') {
+          target.trigger();
         }
       }
     };

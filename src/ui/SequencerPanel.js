@@ -14,7 +14,6 @@ export class SequencerPanel extends BasePanel {
     this._noteSelects = [];
 
     this._buildTransport();
-    this._buildBpm();
     this._buildGrid();
 
     this.module.onStepChange = (i) => this._highlightStep(i);
@@ -25,11 +24,11 @@ export class SequencerPanel extends BasePanel {
     row.className = 'seq-transport';
 
     const playBtn = document.createElement('button');
-    playBtn.textContent = 'Play';
+    playBtn.textContent = 'Arm';
     playBtn.className = 'seq-play-btn';
 
     const stopBtn = document.createElement('button');
-    stopBtn.textContent = 'Stop';
+    stopBtn.textContent = 'Disarm';
     stopBtn.className = 'seq-stop-btn';
     stopBtn.disabled = true;
 
@@ -52,13 +51,6 @@ export class SequencerPanel extends BasePanel {
     row.appendChild(playBtn);
     row.appendChild(stopBtn);
     this.el.appendChild(row);
-  }
-
-  _buildBpm() {
-    this.createSlider('Tempo', 'bpm', {
-      min: 40, max: 300, value: 120, step: 1,
-      format: v => `${v} BPM`,
-    });
   }
 
   _buildGrid() {

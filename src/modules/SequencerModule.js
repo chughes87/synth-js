@@ -1,11 +1,8 @@
 /**
- * SequencerModule — a 16-step sequencer that outputs note CV and triggers.
+ * SequencerModule — a 16-step sequencer driven by an external clock.
  *
- * Uses a lookahead scheduler (setInterval + AudioContext.currentTime)
- * for tight timing without blocking the UI thread.
- *
- * modOutputNode is a ConstantSourceNode whose offset is set to the
- * current step's note frequency — connect it to AudioParams via ModPatchBay.
+ * Does not have its own timer. Call tick() to advance one step.
+ * Connect a ClockModule to seq.clock in the trigger routing grid.
  */
 
 const NOTE_FREQS = {
@@ -20,22 +17,15 @@ const NOTE_FREQS = {
 
 const NOTE_NAMES = Object.keys(NOTE_FREQS);
 
-const LOOKAHEAD_MS = 25;
-const SCHEDULE_AHEAD = 0.1; // seconds
-
 export { NOTE_FREQS, NOTE_NAMES };
 
 export class SequencerModule {
-  constructor(audioContext, { steps = 16 } = {}) {
-    this.context = audioContext;
+  constructor(_audioContext, { steps = 16 } = {}) {
     this.numSteps = steps;
-    this.bpm = 120;
     this._currentStep = 0;
-    this._nextStepTime = 0;
-    this._timerId = null;
+    this._running = false;
     this._onStep = null;
-
-    // No audio-rate CV output — sequencer uses direct property setting via onStep callback
+    this._onStepChange = null;
 
     // Each step: { active: bool, note: string }
     this.steps = [];
@@ -47,63 +37,35 @@ export class SequencerModule {
     }
   }
 
-  // No modOutputNode — sequencer routes via onStep callback, not audio-rate CV.
-  // ModPatchBay stores the connection but _wire is a no-op (modOutputNode is undefined).
+  get running() { return this._running; }
+  get currentStep() { return this._currentStep; }
 
-  get stepDuration() {
-    return 60 / this.bpm / 4; // sixteenth notes
-  }
+  set onStep(fn) { this._onStep = fn; }
+  set onStepChange(fn) { this._onStepChange = fn; }
 
-  get running() {
-    return this._timerId !== null;
-  }
-
-  get currentStep() {
-    return this._currentStep;
-  }
-
-  /**
-   * Register a callback: onStep(stepIndex, step)
-   * Called for each active step so the Rack can trigger connected envelopes.
-   */
-  set onStep(fn) {
-    this._onStep = fn;
-  }
-
+  /** Arm the sequencer — tick() will now advance steps. */
   start() {
-    if (this.running) return;
+    if (this._running) return;
     this._currentStep = 0;
-    this._nextStepTime = this.context.currentTime;
-    this._timerId = setInterval(() => this._schedule(), LOOKAHEAD_MS);
+    this._running = true;
   }
 
+  /** Disarm the sequencer — tick() becomes a no-op. */
   stop() {
-    if (!this.running) return;
-    clearInterval(this._timerId);
-    this._timerId = null;
+    this._running = false;
   }
 
-  _schedule() {
-    while (this._nextStepTime < this.context.currentTime + SCHEDULE_AHEAD) {
-      const step = this.steps[this._currentStep];
-      if (step.active) {
-        if (this._onStep) {
-          this._onStep(this._currentStep, step);
-        }
-      }
-      // Notify UI of step change even for inactive steps
-      if (this._onStepChange) {
-        this._onStepChange(this._currentStep);
-      }
-      this._nextStepTime += this.stepDuration;
-      this._currentStep = (this._currentStep + 1) % this.numSteps;
+  /** Advance one step. Called by an external clock or trigger. */
+  tick() {
+    if (!this._running) return;
+
+    const step = this.steps[this._currentStep];
+    if (step.active && this._onStep) {
+      this._onStep(this._currentStep, step);
     }
-  }
-
-  /**
-   * Register a callback for UI step highlighting.
-   */
-  set onStepChange(fn) {
-    this._onStepChange = fn;
+    if (this._onStepChange) {
+      this._onStepChange(this._currentStep);
+    }
+    this._currentStep = (this._currentStep + 1) % this.numSteps;
   }
 }

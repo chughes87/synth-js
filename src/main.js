@@ -12,6 +12,7 @@ import { VCAPanel } from './ui/VCAPanel.js';
 import { NoisePanel } from './ui/NoisePanel.js';
 import { SequencerPanel } from './ui/SequencerPanel.js';
 import { TriggerPanel } from './ui/TriggerPanel.js';
+import { ClockPanel } from './ui/ClockPanel.js';
 import { AnalyserModule } from './modules/AnalyserModule.js';
 import { OutputModule } from './modules/OutputModule.js';
 import { VisualizerPanel } from './ui/VisualizerPanel.js';
@@ -53,6 +54,7 @@ const PANEL_CLASSES = {
   envelope: EnvelopePanel,
   seq: SequencerPanel,
   trigger: TriggerPanel,
+  clock: ClockPanel,
 };
 
 const modulePanels = document.getElementById('module-panels');
@@ -90,6 +92,8 @@ function addModule(type) {
     rack.wireSequencer(id);
   } else if (type === 'trigger' && rack) {
     rack.wireTrigger(id);
+  } else if (type === 'clock' && rack) {
+    rack.wireClock(id);
   }
 
   onModulesChange();
@@ -115,9 +119,9 @@ const PRESETS = {
     mod: [[4, '2.gain']],
   },
   sequenced: {
-    modules: ['seq', 'osc', 'filter', 'vca', 'output', 'envelope'],
-    signal: [[1, 2], [2, 3], [3, 4]],
-    mod: [[0, '1.freq'], [0, '5.trigger'], [5, '3.gain']],
+    modules: ['clock', 'seq', 'osc', 'filter', 'vca', 'output', 'envelope'],
+    signal: [[2, 3], [3, 4], [4, 5]],
+    mod: [[0, '1.clock'], [1, '2.freq'], [1, '6.trigger'], [6, '4.gain']],
   },
   // Two oscillators slightly detuned into same filter — thick unison
   'dual-detune': {
@@ -133,15 +137,15 @@ const PRESETS = {
   },
   // Sequencer triggering envelope on noise→filter for percussive hits
   'noise-perc': {
-    modules: ['seq', 'noise', 'filter', 'vca', 'output', 'envelope'],
-    signal: [[1, 2], [2, 3], [3, 4]],
-    mod: [[0, '5.trigger'], [5, '3.gain'], [5, '2.freq']],
+    modules: ['clock', 'seq', 'noise', 'filter', 'vca', 'output', 'envelope'],
+    signal: [[2, 3], [3, 4], [4, 5]],
+    mod: [[0, '1.clock'], [1, '6.trigger'], [6, '4.gain'], [6, '3.freq']],
   },
   // Two sequencers at different tempos hitting different oscillators
   polyrhythm: {
-    modules: ['seq', 'seq', 'osc', 'osc', 'filter', 'vca', 'output', 'envelope', 'envelope'],
-    signal: [[2, 4], [3, 4], [4, 5], [5, 6]],
-    mod: [[0, '2.freq'], [1, '3.freq'], [0, '7.trigger'], [1, '8.trigger'], [7, '5.gain'], [8, '5.gain']],
+    modules: ['clock', 'clock', 'seq', 'seq', 'osc', 'osc', 'filter', 'vca', 'output', 'envelope', 'envelope'],
+    signal: [[4, 6], [5, 6], [6, 7], [7, 8]],
+    mod: [[0, '2.clock'], [1, '3.clock'], [2, '4.freq'], [3, '5.freq'], [2, '9.trigger'], [3, '10.trigger'], [9, '7.gain'], [10, '7.gain']],
   },
   // Osc + noise through filter with slow LFO sweep + delay feedback
   'drone-wash': {
@@ -163,9 +167,9 @@ const PRESETS = {
   },
   // Sequenced noise bursts with LFO on filter — glitchy industrial
   'glitch-seq': {
-    modules: ['seq', 'noise', 'filter', 'vca', 'delay', 'output', 'envelope', 'lfo'],
-    signal: [[1, 2], [2, 3], [3, 4], [4, 5]],
-    mod: [[0, '6.trigger'], [6, '3.gain'], [7, '2.freq'], [7, '2.q']],
+    modules: ['clock', 'seq', 'noise', 'filter', 'vca', 'delay', 'output', 'envelope', 'lfo'],
+    signal: [[2, 3], [3, 4], [4, 5], [5, 6]],
+    mod: [[0, '1.clock'], [1, '7.trigger'], [7, '4.gain'], [8, '3.freq'], [8, '3.q']],
   },
   // Three oscillators into filter — massive chord drone
   'triad-drone': {
@@ -175,15 +179,15 @@ const PRESETS = {
   },
   // Sequencer driving osc + envelope on filter freq for acid bass
   'acid-bass': {
-    modules: ['seq', 'osc', 'filter', 'vca', 'output', 'envelope', 'envelope'],
-    signal: [[1, 2], [2, 3], [3, 4]],
-    mod: [[0, '1.freq'], [0, '5.trigger'], [0, '6.trigger'], [5, '3.gain'], [6, '2.freq']],
+    modules: ['clock', 'seq', 'osc', 'filter', 'vca', 'output', 'envelope', 'envelope'],
+    signal: [[2, 3], [3, 4], [4, 5]],
+    mod: [[0, '1.clock'], [1, '2.freq'], [1, '6.trigger'], [1, '7.trigger'], [6, '4.gain'], [7, '3.freq']],
   },
   // Two sequencers → two oscs → two filters → delay → out — stereo-ish madness
   'dual-seq': {
-    modules: ['seq', 'seq', 'osc', 'osc', 'filter', 'filter', 'vca', 'delay', 'output', 'envelope', 'envelope'],
-    signal: [[2, 4], [3, 5], [4, 6], [5, 6], [6, 7], [7, 8]],
-    mod: [[0, '2.freq'], [1, '3.freq'], [0, '9.trigger'], [1, '10.trigger'], [9, '6.gain'], [10, '6.gain']],
+    modules: ['clock', 'seq', 'seq', 'osc', 'osc', 'filter', 'filter', 'vca', 'delay', 'output', 'envelope', 'envelope'],
+    signal: [[3, 5], [4, 6], [5, 7], [6, 7], [7, 8], [8, 9]],
+    mod: [[0, '1.clock'], [0, '2.clock'], [1, '3.freq'], [2, '4.freq'], [1, '10.trigger'], [2, '11.trigger'], [10, '7.gain'], [11, '7.gain']],
   },
   // Everything modulating everything — pure chaos
   'chaos': {
