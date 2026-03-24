@@ -28,7 +28,7 @@ const MOD_COLUMNS = [
   { id: 'vca.gain', label: 'VCA Gn' },
 ];
 
-function buildMatrix(containerId, patchBay, rows, columns, validConnections) {
+function buildMatrix(containerId, patchBay, rows, columns, validConnections, onChange) {
   const container = document.getElementById(containerId);
   const table = document.createElement('table');
   table.className = 'patch-matrix';
@@ -70,6 +70,7 @@ function buildMatrix(containerId, patchBay, rows, columns, validConnections) {
         btn.addEventListener('click', () => {
           const connected = patchBay.toggle(row.id, col.id);
           btn.classList.toggle('active', connected);
+          if (onChange) onChange();
         });
       }
 
@@ -89,9 +90,9 @@ function buildMatrix(containerId, patchBay, rows, columns, validConnections) {
  * SignalPatchMatrixPanel renders the audio signal routing grid.
  */
 export class SignalPatchMatrixPanel {
-  constructor(signalPatchBay) {
+  constructor(signalPatchBay, onChange) {
     this.patchBay = signalPatchBay;
-    this._cells = buildMatrix('signal-patch-panel', signalPatchBay, SIGNAL_ROWS, SIGNAL_COLUMNS, SIGNAL_CONNECTIONS);
+    this._cells = buildMatrix('signal-patch-panel', signalPatchBay, SIGNAL_ROWS, SIGNAL_COLUMNS, SIGNAL_CONNECTIONS, onChange);
   }
 
   refresh() {
@@ -107,9 +108,9 @@ export class SignalPatchMatrixPanel {
  * ModPatchMatrixPanel renders the modulation routing grid.
  */
 export class ModPatchMatrixPanel {
-  constructor(modPatchBay) {
+  constructor(modPatchBay, onChange) {
     this.patchBay = modPatchBay;
-    this._cells = buildMatrix('mod-patch-panel', modPatchBay, MOD_ROWS, MOD_COLUMNS, MOD_CONNECTIONS);
+    this._cells = buildMatrix('mod-patch-panel', modPatchBay, MOD_ROWS, MOD_COLUMNS, MOD_CONNECTIONS, onChange);
   }
 
   refresh() {

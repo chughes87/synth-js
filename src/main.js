@@ -21,6 +21,7 @@ import { SequencerModule } from './modules/SequencerModule.js';
 import { SequencerPanel } from './ui/SequencerPanel.js';
 import { VisualizerPanel } from './ui/VisualizerPanel.js';
 import { SignalPatchMatrixPanel, ModPatchMatrixPanel } from './ui/PatchMatrixPanel.js';
+import { PatchVisualizerPanel } from './ui/PatchVisualizerPanel.js';
 import { Rack } from './ui/Rack.js';
 
 const engine = new AudioEngine();
@@ -64,6 +65,8 @@ new EnvelopePanel(envelope);
 new VCAPanel(vca);
 new SequencerPanel(sequencer);
 const vizPanel = new VisualizerPanel(analyser);
-new SignalPatchMatrixPanel(signalPatchBay);
-new ModPatchMatrixPanel(modPatchBay);
+const patchViz = new PatchVisualizerPanel(signalPatchBay, modPatchBay);
+const onPatchChange = () => patchViz.refresh();
+new SignalPatchMatrixPanel(signalPatchBay, onPatchChange);
+new ModPatchMatrixPanel(modPatchBay, onPatchChange);
 new Rack(engine, { oscillator, noise, envelope, filter, vca, delay, lfo, output, sequencer }, signalPatchBay, modPatchBay, vizPanel);
