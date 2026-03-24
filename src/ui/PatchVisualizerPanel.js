@@ -46,9 +46,10 @@ const NODE_TEXT = '#e0e0e0';
 const BG_COLOR = '#0a0a1a';
 
 export class PatchVisualizerPanel {
-  constructor(signalPatchBay, modPatchBay) {
+  constructor(signalPatchBay, modPatchBay, activeModules) {
     this.signalPatchBay = signalPatchBay;
     this.modPatchBay = modPatchBay;
+    this._activeModules = activeModules;
     this.canvas = document.getElementById('patch-viz-canvas');
     this.ctx = this.canvas.getContext('2d');
 
@@ -74,9 +75,10 @@ export class PatchVisualizerPanel {
     ctx.fillStyle = BG_COLOR;
     ctx.fillRect(0, 0, w, h);
 
-    // Compute pixel positions
+    // Compute pixel positions for active modules only
     const nodes = {};
     for (const [id, [fx, fy]] of Object.entries(NODE_POSITIONS)) {
+      if (!this._activeModules.has(id)) continue;
       nodes[id] = {
         x: PADDING + fx * (w - 2 * PADDING - NODE_W),
         y: PADDING + fy * (h - 2 * PADDING - NODE_H),
