@@ -51,6 +51,19 @@ synth-js/
         └── OutputModule.test.js
 ```
 
+## Phase 2: Five new modules
+
+Goal: expand the synth with filter, delay, noise generator, LFO, and ADSR envelope — modules + tests + UI + wiring.
+
+### Sub-tasks
+
+- [x] **8. FilterModule** — BiquadFilterNode wrapper (lowpass/highpass/bandpass/notch), frequency + Q controls
+- [x] **9. DelayModule** — DelayNode with feedback loop, delay time + feedback controls
+- [x] **10. NoiseModule** — white noise via AudioBuffer, start/stop lifecycle
+- [x] **11. LFOModule** — low-frequency oscillator that modulates an AudioParam, rate + depth controls
+- [x] **12. EnvelopeModule** — ADSR envelope applied to a GainNode
+- [x] **13. UI + wiring for new modules** — panels, HTML, CSS, main.js updates
+
 ### Verification (end state)
 
 1. `npm test` — all Jest tests pass
