@@ -9,9 +9,9 @@ import { typeOf, splitModTarget } from './ModuleRegistry.js';
 const VALID_CONNECTIONS = {
   lfo:      ['osc.freq', 'filter.freq', 'filter.q', 'vca.gain'],
   envelope: ['osc.freq', 'filter.freq', 'filter.q', 'vca.gain'],
-  seq:      ['osc.freq', 'filter.freq', 'filter.q', 'vca.gain', 'envelope.trigger'],
+  seq:      ['osc.freq', 'filter.freq', 'filter.q', 'vca.gain', 'envelope.trigger', 'seq.start', 'seq.clock', 'clock.start'],
   trigger:  ['envelope.trigger', 'seq.start', 'seq.clock', 'clock.start'],
-  clock:    ['seq.clock', 'envelope.trigger'],
+  clock:    ['envelope.trigger', 'seq.start', 'seq.clock', 'clock.start'],
 };
 
 export class ModPatchBay {
