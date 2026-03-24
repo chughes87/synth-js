@@ -13,6 +13,7 @@ const MOD_PARAMS = {
   osc: [{ param: 'freq', label: 'Hz' }],
   filter: [{ param: 'freq', label: 'Hz' }, { param: 'q', label: 'Q' }],
   vca: [{ param: 'gain', label: 'Gn' }],
+  envelope: [{ param: 'trigger', label: 'Trg' }],
 };
 
 function labelFor(instanceId) {

@@ -10,16 +10,6 @@
   <div id="rack">
     <div id="module-panels"></div>
 
-    <div class="module module-wide" id="sequencer-panel">
-      <h2>Sequencer</h2>
-      <label>
-        Tempo
-        <input type="range" id="seq-bpm" min="40" max="300" value="120" step="1">
-        <span id="seq-bpm-value">120 BPM</span>
-      </label>
-      <div id="sequencer-grid"></div>
-    </div>
-
     <div class="module module-wide" id="module-picker-panel">
       <h2>Patch Builder</h2>
       <div class="picker-row">
@@ -30,6 +20,7 @@
           <option value="subtractive">Subtractive</option>
           <option value="fm">FM-ish</option>
           <option value="noisepad">Noise Pad</option>
+          <option value="sequenced">Sequenced</option>
         </select>
       </div>
     </div>
@@ -56,8 +47,6 @@
   <div id="transport">
     <button id="start-btn">Start</button>
     <button id="stop-btn" disabled>Stop</button>
-    <button id="seq-play-btn">Seq Play</button>
-    <button id="seq-stop-btn" disabled>Seq Stop</button>
   </div>
 
   <script type="module" src="src/main.js"></script>

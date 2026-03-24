@@ -10,7 +10,6 @@ import { LFOPanel } from './ui/LFOPanel.js';
 import { EnvelopePanel } from './ui/EnvelopePanel.js';
 import { VCAPanel } from './ui/VCAPanel.js';
 import { NoisePanel } from './ui/NoisePanel.js';
-import { SequencerModule } from './modules/SequencerModule.js';
 import { SequencerPanel } from './ui/SequencerPanel.js';
 import { AnalyserModule } from './modules/AnalyserModule.js';
 import { OutputModule } from './modules/OutputModule.js';
@@ -27,10 +26,8 @@ const registry = new ModuleRegistry(ctx);
 
 // Non-routable modules (always present)
 const analyser = new AnalyserModule(ctx);
-const sequencer = new SequencerModule(ctx);
 
 // Permanent output wiring: output → analyser → destination
-// (Output modules are user-routable; analyser is not)
 const permanentOutput = new OutputModule(ctx);
 permanentOutput.inputNode.disconnect();
 permanentOutput.inputNode.connect(analyser.inputNode);
@@ -53,6 +50,7 @@ const PANEL_CLASSES = {
   output: OutputPanel,
   lfo: LFOPanel,
   envelope: EnvelopePanel,
+  seq: SequencerPanel,
 };
 
 const modulePanels = document.getElementById('module-panels');
@@ -84,6 +82,11 @@ function addModule(type) {
     panels.set(id, panel);
   }
 
+  // Wire sequencer onStep to trigger connected envelopes
+  if (type === 'seq' && rack) {
+    rack.wireSequencer(id);
+  }
+
   onModulesChange();
   if (rack) rack.startModule(id);
   return id;
@@ -103,8 +106,8 @@ function removeModule(instanceId) {
 const PRESETS = {
   subtractive: {
     modules: ['osc', 'filter', 'vca', 'output', 'envelope'],
-    signal: [[0, 1], [1, 2], [2, 3]],  // indices into modules array
-    mod: [[4, '3.gain']],  // [source idx, 'target_idx.param']
+    signal: [[0, 1], [1, 2], [2, 3]],
+    mod: [[4, '3.gain']],
   },
   fm: {
     modules: ['osc', 'output', 'lfo'],
@@ -116,42 +119,18 @@ const PRESETS = {
     signal: [[0, 1], [1, 2], [2, 3]],
     mod: [[4, '2.gain'], [5, '1.freq']],
   },
+  sequenced: {
+    modules: ['seq', 'osc', 'vca', 'output', 'envelope'],
+    signal: [[1, 2], [2, 3]],
+    mod: [[0, '1.freq'], [0, '4.trigger'], [4, '2.gain']],
+  },
 };
-
-function loadPreset(name) {
-  const preset = PRESETS[name];
-  if (!preset) return;
-
-  // Clear everything
-  for (const id of [...activeModules]) {
-    removeModule(id);
-  }
-
-  // Create modules, track instance IDs by index
-  const ids = preset.modules.map(type => addModule(type));
-
-  // Signal connections by index
-  for (const [srcIdx, tgtIdx] of preset.signal) {
-    signalPatchBay.connect(ids[srcIdx], ids[tgtIdx]);
-  }
-
-  // Mod connections: target is 'targetIdx.param'
-  for (const [srcIdx, targetRef] of preset.mod) {
-    const dotIdx = targetRef.indexOf('.');
-    const tgtIdx = Number(targetRef.slice(0, dotIdx));
-    const param = targetRef.slice(dotIdx + 1);
-    modPatchBay.connect(ids[srcIdx], `${ids[tgtIdx]}.${param}`);
-  }
-
-  onModulesChange();
-}
 
 // --- Module picker UI ---
 const moduleSelect = document.getElementById('module-select');
 const moduleAddBtn = document.getElementById('module-add-btn');
 const presetSelect = document.getElementById('preset-select');
 
-// Always show all types (duplicates allowed)
 function populateModuleSelect() {
   moduleSelect.innerHTML = '';
   for (const [type, config] of Object.entries(MODULE_TYPES)) {
@@ -160,6 +139,30 @@ function populateModuleSelect() {
     opt.textContent = config.label;
     moduleSelect.appendChild(opt);
   }
+}
+
+function loadPreset(name) {
+  const preset = PRESETS[name];
+  if (!preset) return;
+
+  for (const id of [...activeModules]) {
+    removeModule(id);
+  }
+
+  const ids = preset.modules.map(type => addModule(type));
+
+  for (const [srcIdx, tgtIdx] of preset.signal) {
+    signalPatchBay.connect(ids[srcIdx], ids[tgtIdx]);
+  }
+
+  for (const [srcIdx, targetRef] of preset.mod) {
+    const dotIdx = targetRef.indexOf('.');
+    const tgtIdx = Number(targetRef.slice(0, dotIdx));
+    const param = targetRef.slice(dotIdx + 1);
+    modPatchBay.connect(ids[srcIdx], `${ids[tgtIdx]}.${param}`);
+  }
+
+  onModulesChange();
 }
 
 moduleAddBtn.addEventListener('click', () => {
@@ -176,12 +179,10 @@ presetSelect.addEventListener('change', () => {
 });
 
 // --- UI panels (non-routable) ---
-new SequencerPanel(sequencer);
 const vizPanel = new VisualizerPanel(analyser);
 const patchViz = new PatchVisualizerPanel(signalPatchBay, modPatchBay, activeModules);
 const signalMatrix = new SignalPatchMatrixPanel(signalPatchBay, activeModules, onPatchChange, removeModule);
 const modMatrix = new ModPatchMatrixPanel(modPatchBay, activeModules, onPatchChange, removeModule);
-const rack = new Rack(engine, registry, activeModules, signalPatchBay, modPatchBay, sequencer, vizPanel);
+const rack = new Rack(engine, registry, activeModules, signalPatchBay, modPatchBay, vizPanel);
 
-// Start with empty patch
 populateModuleSelect();

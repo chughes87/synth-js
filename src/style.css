@@ -136,7 +136,30 @@ button:disabled {
   min-width: 100%;
 }
 
-#sequencer-grid {
+.seq-transport {
+  display: flex;
+  gap: 8px;
+}
+
+.seq-play-btn {
+  background: #2d6a4f;
+  color: #fff;
+}
+
+.seq-play-btn:hover:not(:disabled) {
+  background: #1b4332;
+}
+
+.seq-stop-btn {
+  background: #16213e;
+  color: #e0e0e0;
+}
+
+.seq-stop-btn:hover:not(:disabled) {
+  background: #0f3460;
+}
+
+.sequencer-grid {
   display: flex;
   gap: 4px;
   overflow-x: auto;

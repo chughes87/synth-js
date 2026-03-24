@@ -24,7 +24,7 @@ const TYPE_COLUMN = {
   filter: 'process',
   vca: 'amp', delay: 'amp',
   output: 'output',
-  lfo: 'mod', envelope: 'mod',
+  lfo: 'mod', envelope: 'mod', seq: 'mod',
 };
 
 const SIGNAL_COLOR = '#e94560';
@@ -37,7 +37,7 @@ const BG_COLOR = '#0a0a1a';
 function shortLabel(instanceId) {
   const type = typeOf(instanceId);
   const num = instanceId.slice(type.length + 1);
-  const SHORT = { osc: 'OSC', noise: 'NSE', filter: 'FLT', vca: 'VCA', delay: 'DLY', output: 'OUT', lfo: 'LFO', envelope: 'ENV' };
+  const SHORT = { osc: 'OSC', noise: 'NSE', filter: 'FLT', vca: 'VCA', delay: 'DLY', output: 'OUT', lfo: 'LFO', envelope: 'ENV', seq: 'SEQ' };
   return `${SHORT[type] ?? type} ${num}`;
 }
 
@@ -65,7 +65,7 @@ export class PatchVisualizerPanel {
 
   _computePositions(w, h) {
     const active = [...this._activeModules];
-    const MOD_TYPES = new Set(['lfo', 'envelope']);
+    const MOD_TYPES = new Set(['lfo', 'envelope', 'seq']);
 
     // Group by column
     const columns = {};

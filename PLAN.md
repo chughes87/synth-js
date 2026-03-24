@@ -89,7 +89,7 @@ Goal: expand the synth with filter, delay, noise generator, LFO, and ADSR envelo
 - [x] **24. Split PatchBay into SignalPatchBay + ModPatchBay** — separate audio routing from modulation routing for cleaner architecture
 - [x] **25. Dynamic panel DOM generation** — panels create their own DOM, removing hardcoded HTML dependency
 - [x] **26. Multi-instance modules** — ModuleRegistry, instance IDs, patch bays use registry, picker allows duplicates
-- [ ] **27. Sequencer target dropdown** — routable sequencer
+- [x] **27. Modular sequencer** — sequencer as patchable module with per-instance transport, envelope triggering via mod connections
 
 ### Verification (end state)
 
