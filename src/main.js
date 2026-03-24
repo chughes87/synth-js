@@ -119,9 +119,9 @@ const PRESETS = {
     mod: [[4, '2.gain']],
   },
   sequenced: {
-    modules: ['clock', 'seq', 'osc', 'filter', 'vca', 'output', 'envelope'],
-    signal: [[2, 3], [3, 4], [4, 5]],
-    mod: [[0, '1.clock'], [1, '2.freq'], [1, '6.trigger'], [6, '4.gain']],
+    modules: ['trigger', 'clock', 'seq', 'osc', 'filter', 'vca', 'output', 'envelope'],
+    signal: [[3, 4], [4, 5], [5, 6]],
+    mod: [[0, '1.start'], [0, '2.start'], [1, '2.clock'], [2, '3.freq'], [2, '7.trigger'], [7, '5.gain']],
   },
   // Two oscillators slightly detuned into same filter — thick unison
   'dual-detune': {
@@ -137,15 +137,15 @@ const PRESETS = {
   },
   // Sequencer triggering envelope on noise→filter for percussive hits
   'noise-perc': {
-    modules: ['clock', 'seq', 'noise', 'filter', 'vca', 'output', 'envelope'],
-    signal: [[2, 3], [3, 4], [4, 5]],
-    mod: [[0, '1.clock'], [1, '6.trigger'], [6, '4.gain'], [6, '3.freq']],
+    modules: ['trigger', 'clock', 'seq', 'noise', 'filter', 'vca', 'output', 'envelope'],
+    signal: [[3, 4], [4, 5], [5, 6]],
+    mod: [[0, '1.start'], [0, '2.start'], [1, '2.clock'], [2, '7.trigger'], [7, '5.gain'], [7, '4.freq']],
   },
   // Two sequencers at different tempos hitting different oscillators
   polyrhythm: {
-    modules: ['clock', 'clock', 'seq', 'seq', 'osc', 'osc', 'filter', 'vca', 'output', 'envelope', 'envelope'],
-    signal: [[4, 6], [5, 6], [6, 7], [7, 8]],
-    mod: [[0, '2.clock'], [1, '3.clock'], [2, '4.freq'], [3, '5.freq'], [2, '9.trigger'], [3, '10.trigger'], [9, '7.gain'], [10, '7.gain']],
+    modules: ['trigger', 'clock', 'clock', 'seq', 'seq', 'osc', 'osc', 'filter', 'vca', 'output', 'envelope', 'envelope'],
+    signal: [[5, 7], [6, 7], [7, 8], [8, 9]],
+    mod: [[0, '1.start'], [0, '2.start'], [0, '3.start'], [0, '4.start'], [1, '3.clock'], [2, '4.clock'], [3, '5.freq'], [4, '6.freq'], [3, '10.trigger'], [4, '11.trigger'], [10, '8.gain'], [11, '8.gain']],
   },
   // Osc + noise through filter with slow LFO sweep + delay feedback
   'drone-wash': {
@@ -167,9 +167,9 @@ const PRESETS = {
   },
   // Sequenced noise bursts with LFO on filter — glitchy industrial
   'glitch-seq': {
-    modules: ['clock', 'seq', 'noise', 'filter', 'vca', 'delay', 'output', 'envelope', 'lfo'],
-    signal: [[2, 3], [3, 4], [4, 5], [5, 6]],
-    mod: [[0, '1.clock'], [1, '7.trigger'], [7, '4.gain'], [8, '3.freq'], [8, '3.q']],
+    modules: ['trigger', 'clock', 'seq', 'noise', 'filter', 'vca', 'delay', 'output', 'envelope', 'lfo'],
+    signal: [[3, 4], [4, 5], [5, 6], [6, 7]],
+    mod: [[0, '1.start'], [0, '2.start'], [1, '2.clock'], [2, '8.trigger'], [8, '5.gain'], [9, '4.freq'], [9, '4.q']],
   },
   // Three oscillators into filter — massive chord drone
   'triad-drone': {
@@ -179,15 +179,15 @@ const PRESETS = {
   },
   // Sequencer driving osc + envelope on filter freq for acid bass
   'acid-bass': {
-    modules: ['clock', 'seq', 'osc', 'filter', 'vca', 'output', 'envelope', 'envelope'],
-    signal: [[2, 3], [3, 4], [4, 5]],
-    mod: [[0, '1.clock'], [1, '2.freq'], [1, '6.trigger'], [1, '7.trigger'], [6, '4.gain'], [7, '3.freq']],
+    modules: ['trigger', 'clock', 'seq', 'osc', 'filter', 'vca', 'output', 'envelope', 'envelope'],
+    signal: [[3, 4], [4, 5], [5, 6]],
+    mod: [[0, '1.start'], [0, '2.start'], [1, '2.clock'], [2, '3.freq'], [2, '7.trigger'], [2, '8.trigger'], [7, '5.gain'], [8, '4.freq']],
   },
   // Two sequencers → two oscs → two filters → delay → out — stereo-ish madness
   'dual-seq': {
-    modules: ['clock', 'seq', 'seq', 'osc', 'osc', 'filter', 'filter', 'vca', 'delay', 'output', 'envelope', 'envelope'],
-    signal: [[3, 5], [4, 6], [5, 7], [6, 7], [7, 8], [8, 9]],
-    mod: [[0, '1.clock'], [0, '2.clock'], [1, '3.freq'], [2, '4.freq'], [1, '10.trigger'], [2, '11.trigger'], [10, '7.gain'], [11, '7.gain']],
+    modules: ['trigger', 'clock', 'seq', 'seq', 'osc', 'osc', 'filter', 'filter', 'vca', 'delay', 'output', 'envelope', 'envelope'],
+    signal: [[4, 6], [5, 7], [6, 8], [7, 8], [8, 9], [9, 10]],
+    mod: [[0, '1.start'], [0, '2.start'], [0, '3.start'], [1, '2.clock'], [1, '3.clock'], [2, '4.freq'], [3, '5.freq'], [2, '11.trigger'], [3, '12.trigger'], [11, '8.gain'], [12, '8.gain']],
   },
   // Everything modulating everything — pure chaos
   'chaos': {
