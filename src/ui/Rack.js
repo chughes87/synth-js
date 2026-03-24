@@ -65,8 +65,12 @@ export class Rack {
 
         if (param === 'trigger' && typeof target.trigger === 'function') {
           target.trigger();
-        } else if (param === 'start' && typeof target.start === 'function') {
-          target.start();
+        } else if (param === 'start') {
+          if (target.running && typeof target.stop === 'function') {
+            target.stop();
+          } else if (typeof target.start === 'function') {
+            target.start();
+          }
         }
       }
     };
