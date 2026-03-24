@@ -1,4 +1,5 @@
 import { AudioEngine } from './engine/AudioEngine.js';
+import { PatchBay } from './engine/PatchBay.js';
 import { OscillatorModule } from './modules/OscillatorModule.js';
 import { NoiseModule } from './modules/NoiseModule.js';
 import { EnvelopeModule } from './modules/EnvelopeModule.js';
@@ -16,6 +17,7 @@ import { EnvelopePanel } from './ui/EnvelopePanel.js';
 import { SequencerModule } from './modules/SequencerModule.js';
 import { SequencerPanel } from './ui/SequencerPanel.js';
 import { VisualizerPanel } from './ui/VisualizerPanel.js';
+import { PatchMatrixPanel } from './ui/PatchMatrixPanel.js';
 import { Rack } from './ui/Rack.js';
 
 const engine = new AudioEngine();
@@ -31,13 +33,17 @@ const output = new OutputModule(ctx);
 const analyser = new AnalyserModule(ctx);
 const sequencer = new SequencerModule(ctx);
 
-// Default signal chain: osc → filter → output → analyser → destination
-// Analyser taps the final signal for visualization
-oscillator.connect(filter);
-filter.connect(output);
+// Analyser is permanently wired after output (not user-routable)
 output.inputNode.disconnect();
 output.inputNode.connect(analyser.inputNode);
 analyser.connect({ inputNode: ctx.destination });
+
+// PatchBay manages all user-routable connections
+const patchBay = new PatchBay({ osc: oscillator, noise, filter, envelope, delay, lfo, output });
+
+// Default signal chain: osc → filter → output
+patchBay.connect('osc', 'filter');
+patchBay.connect('filter', 'output');
 
 // UI panels
 new OscillatorPanel(oscillator);
@@ -48,4 +54,5 @@ new LFOPanel(lfo);
 new EnvelopePanel(envelope);
 new SequencerPanel(sequencer);
 const vizPanel = new VisualizerPanel(analyser);
-new Rack(engine, { oscillator, noise, envelope, filter, delay, lfo, output, sequencer }, vizPanel);
+new PatchMatrixPanel(patchBay);
+new Rack(engine, { oscillator, noise, envelope, filter, delay, lfo, output, sequencer }, patchBay, vizPanel);
