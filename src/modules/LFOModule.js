@@ -45,6 +45,10 @@ export class LFOModule {
     }
   }
 
+  get modOutputNode() {
+    return this._depthNode;
+  }
+
   get running() {
     return this._oscillator !== null;
   }

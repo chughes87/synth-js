@@ -1,7 +1,9 @@
 /**
- * SignalPatchBay manages audio-rate connections between modules.
- * Handles outputNode.connect(inputNode) routing only.
+ * SignalPatchBay manages audio-rate connections between module instances.
+ * Uses ModuleRegistry for dynamic lookups and typeOf for validation.
  */
+
+import { typeOf } from './ModuleRegistry.js';
 
 const VALID_CONNECTIONS = {
   osc:    ['filter', 'vca', 'delay', 'output'],
@@ -12,23 +14,9 @@ const VALID_CONNECTIONS = {
 };
 
 export class SignalPatchBay {
-  constructor(modules) {
+  constructor(registry) {
+    this._registry = registry;
     this._connections = new Set();
-
-    this._sources = {
-      osc: modules.osc,
-      noise: modules.noise,
-      filter: modules.filter,
-      vca: modules.vca,
-      delay: modules.delay,
-    };
-
-    this._targets = {
-      filter: modules.filter,
-      vca: modules.vca,
-      delay: modules.delay,
-      output: modules.output,
-    };
   }
 
   _key(sourceId, targetId) {
@@ -36,8 +24,10 @@ export class SignalPatchBay {
   }
 
   _isValid(sourceId, targetId) {
-    const allowed = VALID_CONNECTIONS[sourceId];
-    return allowed !== undefined && allowed.includes(targetId);
+    const sourceType = typeOf(sourceId);
+    const targetType = typeOf(targetId);
+    const allowed = VALID_CONNECTIONS[sourceType];
+    return allowed !== undefined && allowed.includes(targetType);
   }
 
   connect(sourceId, targetId) {
@@ -45,8 +35,12 @@ export class SignalPatchBay {
     const key = this._key(sourceId, targetId);
     if (this._connections.has(key)) return true;
 
+    const source = this._registry.get(sourceId);
+    const target = this._registry.get(targetId);
+    if (!source || !target) return false;
+
     this._connections.add(key);
-    this._sources[sourceId].outputNode.connect(this._targets[targetId].inputNode);
+    source.outputNode.connect(target.inputNode);
     return true;
   }
 
@@ -54,8 +48,12 @@ export class SignalPatchBay {
     const key = this._key(sourceId, targetId);
     if (!this._connections.has(key)) return false;
 
+    const source = this._registry.get(sourceId);
+    const target = this._registry.get(targetId);
     this._connections.delete(key);
-    this._sources[sourceId].outputNode.disconnect(this._targets[targetId].inputNode);
+    if (source && target) {
+      source.outputNode.disconnect(target.inputNode);
+    }
     return true;
   }
 
@@ -68,18 +66,18 @@ export class SignalPatchBay {
     }
   }
 
-  isConnected(sourceId, targetId) {
-    return this._connections.has(this._key(sourceId, targetId));
-  }
-
-  /** Disconnect all connections involving the given module (as source or target). */
-  disconnectAll(moduleId) {
+  /** Disconnect all connections involving the given instance ID. */
+  disconnectAll(instanceId) {
     for (const key of [...this._connections]) {
       const [source, target] = key.split('->');
-      if (source === moduleId || target === moduleId) {
+      if (source === instanceId || target === instanceId) {
         this.disconnect(source, target);
       }
     }
+  }
+
+  isConnected(sourceId, targetId) {
+    return this._connections.has(this._key(sourceId, targetId));
   }
 
   getConnections() {
