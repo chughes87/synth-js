@@ -1,8 +1,8 @@
 import { BasePanel } from './BasePanel.js';
 
 export class EnvelopePanel extends BasePanel {
-  constructor(envelopeModule, container) {
-    super(envelopeModule, container);
+  constructor(envelopeModule, container, instanceId) {
+    super(envelopeModule, container, instanceId);
     this.setTitle('Envelope');
     this.createSlider('Attack', 'attack', {
       min: 0.001, max: 1, value: 0.01, step: 0.001,

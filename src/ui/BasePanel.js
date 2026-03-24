@@ -3,8 +3,9 @@
  * Each panel creates its own DOM subtree inside a given container element.
  */
 export class BasePanel {
-  constructor(module, container) {
+  constructor(module, container, instanceId) {
     this.module = module;
+    this.instanceId = instanceId;
     this.el = document.createElement('div');
     this.el.className = 'module';
     container.appendChild(this.el);
@@ -12,7 +13,14 @@ export class BasePanel {
 
   setTitle(text) {
     const h2 = document.createElement('h2');
-    h2.textContent = text;
+    // Append instance number if available
+    if (this.instanceId) {
+      const type = this.instanceId.replace(/-\d+$/, '');
+      const num = this.instanceId.slice(type.length + 1);
+      h2.textContent = `${text} ${num}`;
+    } else {
+      h2.textContent = text;
+    }
     this.el.appendChild(h2);
   }
 

@@ -79,7 +79,7 @@ function addModule(type) {
 
   const PanelClass = PANEL_CLASSES[type];
   if (PanelClass) {
-    const panel = new PanelClass(module, modulePanels);
+    const panel = new PanelClass(module, modulePanels, id);
     panels.set(id, panel);
   }
 

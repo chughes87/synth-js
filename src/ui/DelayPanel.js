@@ -1,8 +1,8 @@
 import { BasePanel } from './BasePanel.js';
 
 export class DelayPanel extends BasePanel {
-  constructor(delayModule, container) {
-    super(delayModule, container);
+  constructor(delayModule, container, instanceId) {
+    super(delayModule, container, instanceId);
     this.setTitle('Delay');
     this.createSlider('Time', 'delayTime', {
       min: 0.01, max: 1.5, value: 0.3, step: 0.01,
