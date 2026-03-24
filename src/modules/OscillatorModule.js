@@ -1,0 +1,64 @@
+/**
+ * OscillatorModule wraps a Web Audio OscillatorNode.
+ * Because OscillatorNode is one-shot, start() creates a fresh node each time.
+ */
+export class OscillatorModule {
+  constructor(audioContext) {
+    this.context = audioContext;
+    this._oscillator = null;
+    this._frequency = 440;
+    this._type = 'sine';
+    this.outputNode = audioContext.createGain();
+  }
+
+  get frequency() {
+    return this._frequency;
+  }
+
+  set frequency(value) {
+    this._frequency = value;
+    if (this._oscillator) {
+      this._oscillator.frequency.value = value;
+    }
+  }
+
+  get type() {
+    return this._type;
+  }
+
+  set type(value) {
+    this._type = value;
+    if (this._oscillator) {
+      this._oscillator.type = value;
+    }
+  }
+
+  get running() {
+    return this._oscillator !== null;
+  }
+
+  connect(target) {
+    const destination = target.inputNode ?? target;
+    this.outputNode.connect(destination);
+  }
+
+  start() {
+    if (this._oscillator) {
+      return;
+    }
+    this._oscillator = this.context.createOscillator();
+    this._oscillator.type = this._type;
+    this._oscillator.frequency.value = this._frequency;
+    this._oscillator.connect(this.outputNode);
+    this._oscillator.start();
+  }
+
+  stop() {
+    if (!this._oscillator) {
+      return;
+    }
+    this._oscillator.stop();
+    this._oscillator.disconnect();
+    this._oscillator = null;
+  }
+}
