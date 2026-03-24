@@ -136,6 +136,18 @@ button:disabled {
   min-width: 100%;
 }
 
+.trigger-fire-btn {
+  background: #e94560;
+  color: #fff;
+  padding: 8px 32px;
+  font-size: 14px;
+  width: 100%;
+}
+
+.trigger-fire-btn:hover {
+  background: #c73650;
+}
+
 .seq-transport {
   display: flex;
   gap: 8px;

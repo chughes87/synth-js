@@ -10,6 +10,7 @@ const VALID_CONNECTIONS = {
   lfo:      ['osc.freq', 'filter.freq', 'filter.q', 'vca.gain'],
   envelope: ['osc.freq', 'filter.freq', 'filter.q', 'vca.gain'],
   seq:      ['osc.freq', 'filter.freq', 'filter.q', 'vca.gain', 'envelope.trigger'],
+  trigger:  ['envelope.trigger', 'seq.start'],
 };
 
 export class ModPatchBay {

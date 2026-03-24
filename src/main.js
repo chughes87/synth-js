@@ -11,6 +11,7 @@ import { EnvelopePanel } from './ui/EnvelopePanel.js';
 import { VCAPanel } from './ui/VCAPanel.js';
 import { NoisePanel } from './ui/NoisePanel.js';
 import { SequencerPanel } from './ui/SequencerPanel.js';
+import { TriggerPanel } from './ui/TriggerPanel.js';
 import { AnalyserModule } from './modules/AnalyserModule.js';
 import { OutputModule } from './modules/OutputModule.js';
 import { VisualizerPanel } from './ui/VisualizerPanel.js';
@@ -51,6 +52,7 @@ const PANEL_CLASSES = {
   lfo: LFOPanel,
   envelope: EnvelopePanel,
   seq: SequencerPanel,
+  trigger: TriggerPanel,
 };
 
 const modulePanels = document.getElementById('module-panels');
@@ -83,9 +85,11 @@ function addModule(type) {
     panels.set(id, panel);
   }
 
-  // Wire sequencer onStep to trigger connected envelopes
+  // Wire control modules
   if (type === 'seq' && rack) {
     rack.wireSequencer(id);
+  } else if (type === 'trigger' && rack) {
+    rack.wireTrigger(id);
   }
 
   onModulesChange();

@@ -49,6 +49,29 @@ export class Rack {
     };
   }
 
+  /**
+   * Wire a trigger module's onFire to start/trigger connected targets.
+   */
+  wireTrigger(trigId) {
+    const trig = this._registry.get(trigId);
+    if (!trig) return;
+
+    trig.onFire = () => {
+      for (const conn of this.modPatchBay.getConnections()) {
+        if (conn.source !== trigId) continue;
+        const [targetId, param] = splitModTarget(conn.target);
+        const target = this._registry.get(targetId);
+        if (!target) continue;
+
+        if (param === 'trigger' && typeof target.trigger === 'function') {
+          target.trigger();
+        } else if (param === 'start' && typeof target.start === 'function') {
+          target.start();
+        }
+      }
+    };
+  }
+
   _hasSignalConnections(instanceId) {
     return this.signalPatchBay.getConnections().some(c => c.source === instanceId);
   }
