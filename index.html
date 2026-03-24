@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>synth-js</title>
+  <link rel="stylesheet" href="src/style.css">
+</head>
+<body>
+  <div id="rack">
+    <div class="module" id="oscillator-panel">
+      <h2>Oscillator</h2>
+      <label>
+        Frequency
+        <input type="range" id="osc-frequency" min="20" max="2000" value="440" step="1">
+        <span id="osc-frequency-value">440 Hz</span>
+      </label>
+      <label>
+        Waveform
+        <select id="osc-type">
+          <option value="sine">Sine</option>
+          <option value="square">Square</option>
+          <option value="sawtooth">Sawtooth</option>
+          <option value="triangle">Triangle</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="module" id="output-panel">
+      <h2>Output</h2>
+      <label>
+        Volume
+        <input type="range" id="output-volume" min="0" max="1" value="0.5" step="0.01">
+        <span id="output-volume-value">0.5</span>
+      </label>
+    </div>
+  </div>
+
+  <div id="transport">
+    <button id="start-btn">Start</button>
+    <button id="stop-btn" disabled>Stop</button>
+  </div>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
