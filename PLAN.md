@@ -69,6 +69,16 @@ Goal: expand the synth with filter, delay, noise generator, LFO, and ADSR envelo
 - [x] **14. SequencerModule** — 16-step sequencer with note selection, BPM control, lookahead scheduling
 - [x] **15. SequencerPanel + wiring** — step grid UI, Seq Play/Stop transport, integration with oscillator + envelope
 
+## Phase 4: UX Improvements
+
+### Sub-tasks
+
+- [x] **16. Waveform visualizer** — AnalyserModule + VisualizerPanel using canvas, wired after output to show live waveform
+- [ ] **17. Live value displays on sliders** — show current Hz, ms, dB values next to each control
+- [ ] **18. Keyboard input** — play notes from computer keyboard
+- [ ] **19. Active step highlight** — animate current sequencer step during playback
+- [ ] **20. Cable/patch visualization** — show signal flow between modules
+
 ### Verification (end state)
 
 1. `npm test` — all Jest tests pass

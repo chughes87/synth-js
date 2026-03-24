@@ -1,11 +1,13 @@
+import { BaseModule } from './BaseModule.js';
+
 /**
  * FilterModule wraps a BiquadFilterNode.
  * Supports lowpass, highpass, bandpass, and notch filter types.
  * Signal passes through: inputNode → filter → outputNode
  */
-export class FilterModule {
+export class FilterModule extends BaseModule {
   constructor(audioContext) {
-    this.context = audioContext;
+    super(audioContext);
     this._filter = audioContext.createBiquadFilter();
     this.inputNode = this._filter;
     this.outputNode = this._filter;
@@ -35,8 +37,4 @@ export class FilterModule {
     this._filter.type = value;
   }
 
-  connect(target) {
-    const destination = target.inputNode ?? target;
-    this.outputNode.connect(destination);
-  }
 }

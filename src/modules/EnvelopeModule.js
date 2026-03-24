@@ -1,11 +1,13 @@
+import { BaseModule } from './BaseModule.js';
+
 /**
  * EnvelopeModule applies an ADSR envelope to a GainNode.
  * Signal passes through: inputNode → gain (envelope) → outputNode
  * Call trigger() on note-on and release() on note-off.
  */
-export class EnvelopeModule {
+export class EnvelopeModule extends BaseModule {
   constructor(audioContext) {
-    this.context = audioContext;
+    super(audioContext);
     this._gain = audioContext.createGain();
     this._gain.gain.value = 0;
     this.inputNode = this._gain;
@@ -15,11 +17,6 @@ export class EnvelopeModule {
     this.decay = 0.1;
     this.sustain = 0.7;
     this.releaseTime = 0.3;
-  }
-
-  connect(target) {
-    const destination = target.inputNode ?? target;
-    this.outputNode.connect(destination);
   }
 
   trigger() {

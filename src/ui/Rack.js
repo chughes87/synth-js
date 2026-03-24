@@ -4,7 +4,7 @@ import { NOTE_FREQS } from '../modules/SequencerModule.js';
  * Rack wires transport controls and toggle checkboxes to the engine and modules.
  */
 export class Rack {
-  constructor(engine, modules) {
+  constructor(engine, modules, visualizer) {
     this.engine = engine;
     this.osc = modules.oscillator;
     this.noise = modules.noise;
@@ -14,6 +14,7 @@ export class Rack {
     this.lfo = modules.lfo;
     this.output = modules.output;
     this.sequencer = modules.sequencer;
+    this.visualizer = visualizer;
 
     this.startBtn = document.getElementById('start-btn');
     this.stopBtn = document.getElementById('stop-btn');
@@ -24,16 +25,13 @@ export class Rack {
     this.delayCheckbox = document.getElementById('delay-enabled');
     this.lfoCheckbox = document.getElementById('lfo-enabled');
 
-    this._envConnected = false;
-    this._delayConnected = false;
-
     this.startBtn.addEventListener('click', () => this.start());
     this.stopBtn.addEventListener('click', () => this.stop());
     this.seqPlayBtn.addEventListener('click', () => this.seqPlay());
     this.seqStopBtn.addEventListener('click', () => this.seqStop());
     this.noiseCheckbox.addEventListener('change', () => this._toggleNoise());
-    this.envCheckbox.addEventListener('change', () => this._toggleEnvelope());
-    this.delayCheckbox.addEventListener('change', () => this._toggleDelay());
+    this.envCheckbox.addEventListener('change', () => this._rebuildChain());
+    this.delayCheckbox.addEventListener('change', () => this._rebuildChain());
     this.lfoCheckbox.addEventListener('change', () => this._toggleLFO());
 
     // Wire sequencer step callback
@@ -60,6 +58,7 @@ export class Rack {
     if (this.envCheckbox.checked) {
       this.envelope.trigger();
     }
+    if (this.visualizer) this.visualizer.start();
     this.startBtn.disabled = true;
     this.stopBtn.disabled = false;
   }
@@ -72,6 +71,7 @@ export class Rack {
     if (this.envCheckbox.checked) {
       this.envelope.release();
     }
+    if (this.visualizer) this.visualizer.stop();
     this.startBtn.disabled = false;
     this.stopBtn.disabled = true;
     this.seqPlayBtn.disabled = false;
@@ -89,6 +89,7 @@ export class Rack {
       if (!this.lfo.running) this.lfo.start();
     }
     this.sequencer.start();
+    if (this.visualizer) this.visualizer.start();
     this.startBtn.disabled = true;
     this.stopBtn.disabled = false;
     this.seqPlayBtn.disabled = true;
@@ -113,37 +114,21 @@ export class Rack {
     }
   }
 
-  _toggleEnvelope() {
-    if (this.envCheckbox.checked) {
-      // Insert envelope between filter and output
-      this.filter.outputNode.disconnect();
-      this.filter.connect(this.envelope);
-      this.envelope.connect(this._delayConnected ? this.delay : this.output);
-      this._envConnected = true;
-    } else {
-      this.filter.outputNode.disconnect();
-      if (this._envConnected) {
-        this.envelope.outputNode.disconnect();
-      }
-      this.filter.connect(this._delayConnected ? this.delay : this.output);
-      this._envConnected = false;
-    }
-  }
+  /** Rebuild the signal chain: filter → [envelope?] → [delay?] → output */
+  _rebuildChain() {
+    // Disconnect all optional chain nodes
+    this.filter.outputNode.disconnect();
+    this.envelope.outputNode.disconnect();
+    this.delay.outputNode.disconnect();
 
-  _toggleDelay() {
-    if (this.delayCheckbox.checked) {
-      // Insert delay before output
-      const source = this._envConnected ? this.envelope : this.filter;
-      source.outputNode.disconnect();
-      source.connect(this.delay);
-      this.delay.connect(this.output);
-      this._delayConnected = true;
-    } else {
-      const source = this._envConnected ? this.envelope : this.filter;
-      source.outputNode.disconnect();
-      this.delay.outputNode.disconnect();
-      source.connect(this.output);
-      this._delayConnected = false;
+    // Build chain in order based on current toggle states
+    const chain = [this.filter];
+    if (this.envCheckbox.checked) chain.push(this.envelope);
+    if (this.delayCheckbox.checked) chain.push(this.delay);
+    chain.push(this.output);
+
+    for (let i = 0; i < chain.length - 1; i++) {
+      chain[i].connect(chain[i + 1]);
     }
   }
 

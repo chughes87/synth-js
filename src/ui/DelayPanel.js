@@ -1,24 +1,9 @@
-export class DelayPanel {
+import { BasePanel } from './BasePanel.js';
+
+export class DelayPanel extends BasePanel {
   constructor(delayModule) {
-    this.module = delayModule;
-    this.timeSlider = document.getElementById('delay-time');
-    this.timeValue = document.getElementById('delay-time-value');
-    this.feedbackSlider = document.getElementById('delay-feedback');
-    this.feedbackValue = document.getElementById('delay-feedback-value');
-
-    this.timeSlider.addEventListener('input', () => this._onTime());
-    this.feedbackSlider.addEventListener('input', () => this._onFeedback());
-  }
-
-  _onTime() {
-    const val = Number(this.timeSlider.value);
-    this.module.delayTime = val;
-    this.timeValue.textContent = `${val.toFixed(2)} s`;
-  }
-
-  _onFeedback() {
-    const val = Number(this.feedbackSlider.value);
-    this.module.feedback = val;
-    this.feedbackValue.textContent = val.toFixed(2);
+    super(delayModule);
+    this.bindSlider('delay-time', 'delayTime', v => `${v.toFixed(2)} s`);
+    this.bindSlider('delay-feedback', 'feedback', v => v.toFixed(2));
   }
 }
