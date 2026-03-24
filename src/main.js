@@ -1,5 +1,6 @@
 import { AudioEngine } from './engine/AudioEngine.js';
-import { PatchBay } from './engine/PatchBay.js';
+import { SignalPatchBay } from './engine/SignalPatchBay.js';
+import { ModPatchBay } from './engine/ModPatchBay.js';
 import { OscillatorModule } from './modules/OscillatorModule.js';
 import { NoiseModule } from './modules/NoiseModule.js';
 import { EnvelopeModule } from './modules/EnvelopeModule.js';
@@ -19,7 +20,7 @@ import { VCAPanel } from './ui/VCAPanel.js';
 import { SequencerModule } from './modules/SequencerModule.js';
 import { SequencerPanel } from './ui/SequencerPanel.js';
 import { VisualizerPanel } from './ui/VisualizerPanel.js';
-import { PatchMatrixPanel } from './ui/PatchMatrixPanel.js';
+import { SignalPatchMatrixPanel, ModPatchMatrixPanel } from './ui/PatchMatrixPanel.js';
 import { Rack } from './ui/Rack.js';
 
 const engine = new AudioEngine();
@@ -41,14 +42,17 @@ output.inputNode.disconnect();
 output.inputNode.connect(analyser.inputNode);
 analyser.connect({ inputNode: ctx.destination });
 
-// PatchBay manages all user-routable connections
-const patchBay = new PatchBay({ osc: oscillator, noise, filter, vca, envelope, delay, lfo, output });
+const modules = { osc: oscillator, noise, filter, vca, envelope, delay, lfo, output };
+
+// Separate patch bays for audio and modulation routing
+const signalPatchBay = new SignalPatchBay(modules);
+const modPatchBay = new ModPatchBay(modules);
 
 // Default signal chain: osc → filter → vca → output, envelope → vca.gain
-patchBay.connect('osc', 'filter');
-patchBay.connect('filter', 'vca');
-patchBay.connect('vca', 'output');
-patchBay.connect('envelope', 'vca.gain');
+signalPatchBay.connect('osc', 'filter');
+signalPatchBay.connect('filter', 'vca');
+signalPatchBay.connect('vca', 'output');
+modPatchBay.connect('envelope', 'vca.gain');
 
 // UI panels
 new OscillatorPanel(oscillator);
@@ -60,5 +64,6 @@ new EnvelopePanel(envelope);
 new VCAPanel(vca);
 new SequencerPanel(sequencer);
 const vizPanel = new VisualizerPanel(analyser);
-new PatchMatrixPanel(patchBay);
-new Rack(engine, { oscillator, noise, envelope, filter, vca, delay, lfo, output, sequencer }, patchBay, vizPanel);
+new SignalPatchMatrixPanel(signalPatchBay);
+new ModPatchMatrixPanel(modPatchBay);
+new Rack(engine, { oscillator, noise, envelope, filter, vca, delay, lfo, output, sequencer }, signalPatchBay, modPatchBay, vizPanel);
