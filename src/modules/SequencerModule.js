@@ -35,10 +35,7 @@ export class SequencerModule {
     this._timerId = null;
     this._onStep = null;
 
-    // CV output — ConstantSourceNode whose offset = current note freq
-    this._cvSource = null;
-    this._cvGain = audioContext.createGain();
-    this._cvGain.gain.value = 0;
+    // No audio-rate CV output — sequencer uses direct property setting via onStep callback
 
     // Each step: { active: bool, note: string }
     this.steps = [];
@@ -50,9 +47,8 @@ export class SequencerModule {
     }
   }
 
-  get modOutputNode() {
-    return this._cvGain;
-  }
+  // No modOutputNode — sequencer routes via onStep callback, not audio-rate CV.
+  // ModPatchBay stores the connection but _wire is a no-op (modOutputNode is undefined).
 
   get stepDuration() {
     return 60 / this.bpm / 4; // sixteenth notes
@@ -76,15 +72,6 @@ export class SequencerModule {
 
   start() {
     if (this.running) return;
-
-    // Start CV source
-    if (!this._cvSource) {
-      this._cvSource = this.context.createConstantSource();
-      this._cvSource.offset.value = 0;
-      this._cvSource.connect(this._cvGain);
-      this._cvSource.start();
-    }
-
     this._currentStep = 0;
     this._nextStepTime = this.context.currentTime;
     this._timerId = setInterval(() => this._schedule(), LOOKAHEAD_MS);
@@ -94,24 +81,12 @@ export class SequencerModule {
     if (!this.running) return;
     clearInterval(this._timerId);
     this._timerId = null;
-
-    // Stop CV source
-    if (this._cvSource) {
-      this._cvSource.stop();
-      this._cvSource.disconnect();
-      this._cvSource = null;
-    }
-    this._cvGain.gain.value = 0;
   }
 
   _schedule() {
     while (this._nextStepTime < this.context.currentTime + SCHEDULE_AHEAD) {
       const step = this.steps[this._currentStep];
       if (step.active) {
-        // Update CV output with note frequency
-        const freq = NOTE_FREQS[step.note] ?? 261.63;
-        this._cvGain.gain.setValueAtTime(freq, this._nextStepTime);
-
         if (this._onStep) {
           this._onStep(this._currentStep, step);
         }

@@ -1,5 +1,5 @@
-import { typeOf } from '../engine/ModuleRegistry.js';
-import { splitModTarget } from '../engine/ModuleRegistry.js';
+import { typeOf, splitModTarget } from '../engine/ModuleRegistry.js';
+import { NOTE_FREQS } from '../modules/SequencerModule.js';
 
 /**
  * Rack wires transport controls to the engine and modules.
@@ -31,16 +31,19 @@ export class Rack {
     const seq = this._registry.get(seqId);
     if (!seq) return;
 
-    seq.onStep = (_i, _step) => {
-      // Find envelopes connected to this sequencer via mod patch bay
+    seq.onStep = (_i, step) => {
+      const freq = NOTE_FREQS[step.note] ?? 261.63;
+
       for (const conn of this.modPatchBay.getConnections()) {
         if (conn.source !== seqId) continue;
         const [targetId, param] = splitModTarget(conn.target);
-        if (param === 'trigger') {
-          const target = this._registry.get(targetId);
-          if (target && typeof target.trigger === 'function') {
-            target.trigger();
-          }
+        const target = this._registry.get(targetId);
+        if (!target) continue;
+
+        if (param === 'trigger' && typeof target.trigger === 'function') {
+          target.trigger();
+        } else if (param === 'freq' && 'frequency' in target) {
+          target.frequency = freq;
         }
       }
     };
